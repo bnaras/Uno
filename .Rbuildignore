@@ -12,3 +12,7 @@
 ^docs$
 ^pkgdown$
 ^\.github$
+^src/HiGHS/\.
+^src/uno/\.
+^src/HiGHS/CITATION\.cff$
+^src/uno/CITATION\.cff$

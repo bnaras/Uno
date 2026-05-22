@@ -19,7 +19,7 @@ License: MIT + file LICENSE
 URL: https://bnaras.github.io/Uno/, https://github.com/bnaras/Uno
 BugReports: https://github.com/bnaras/Uno/issues
 SystemRequirements: CMake (>= 3.16), C++17, GNU make
-Depends: rmumps (>= 5.2.1-41)
+Imports: rmumps (>= 5.2.1-41)
 LinkingTo: cpp11, rmumps
 Suggests: cpp11, tinytest, knitr, rmarkdown
 VignetteBuilder: knitr
