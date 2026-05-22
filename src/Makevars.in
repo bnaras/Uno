@@ -1,0 +1,8 @@
+CXX_STD = CXX17
+
+# Uno C API headers live under <unolib>/include/uno/.
+PKG_CPPFLAGS = -I@RUNO_LIB_DIR@/include
+
+# Link the Uno static archive; its BLAS/LAPACK/Fortran-runtime externals are
+# resolved here against R's own libraries.
+PKG_LIBS = @RUNO_PKG_LIBS@ $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)

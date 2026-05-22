@@ -1,0 +1,22 @@
+url: https://bnaras.github.io/Uno
+
+template:
+  bootstrap: 5
+
+authors:
+  Balasubramanian Narasimhan:
+    href: https://naras.su.domains
+  Charlie Vanaret:
+    href: https://cvanaret.wordpress.com/
+  Sven Leyffer:
+    href: https://www.anl.gov/profile/sven-leyffer
+
+reference:
+- title: Solving
+  desc: Solve a nonlinear program with Uno.
+  contents:
+  - uno_solve
+- title: Package
+  contents:
+  - Uno-package
+  - uno_version

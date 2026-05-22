@@ -1,0 +1,7 @@
+[submodule "src/uno"]
+	path = src/uno
+	url = https://github.com/bnaras/Uno_source.git
+	branch = r-pkg
+[submodule "src/HiGHS"]
+	path = src/HiGHS
+	url = https://github.com/ERGO-Code/HiGHS.git

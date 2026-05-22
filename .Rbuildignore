@@ -1,0 +1,14 @@
+^uno_build$
+^highs_build$
+^src/unolib$
+^src/highslib$
+^src/Makevars$
+^src/Makevars\.win$
+^.*\.o$
+^.*\.so$
+^\.gitignore$
+^LICENSE\.md$
+^_pkgdown\.yml$
+^docs$
+^pkgdown$
+^\.github$

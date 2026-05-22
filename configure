@@ -1,0 +1,63 @@
+#!/bin/sh
+#
+# configure for the Uno R package.
+#
+# Builds the Uno static library (and, in later milestones, its HiGHS QP/LP
+# subproblem solver) from source via CMake, then generates src/Makevars.
+
+R_UNO_PKG_HOME=`pwd`
+
+: ${R_HOME=`R RHOME`}
+if test -z "${R_HOME}"; then
+    echo "'R_HOME' could not be found!"
+    exit 1
+fi
+
+# Locate the MUMPS C-API headers shipped by the 'rmumps' package. build_uno.sh
+# compiles Uno's MUMPSSolver.cpp against these (header-only); we link NO MUMPS
+# library -- the single dmumps_c entry point is resolved at runtime from rmumps
+# via R_FindSymbol (see src/dmumps_shim.c). This enables the interior-point
+# (e.g. "ipopt") preset. Skip with R_UNO_NO_MUMPS=1 (filtersqp/HiGHS only).
+if test -z "${R_UNO_NO_MUMPS}"; then
+    RMUMPS_INC=`"${R_HOME}/bin/Rscript" -e 'cat(system.file("include", package="rmumps"))'`
+    if test -z "${RMUMPS_INC}" || test ! -f "${RMUMPS_INC}/dmumps_c.h"; then
+        echo "rmumps headers not found (looked in '${RMUMPS_INC}')."
+        echo "Install 'rmumps' (>= 5.2.1-41), or set R_UNO_NO_MUMPS=1 to build without MUMPS."
+        exit 1
+    fi
+    export MUMPS_R_INCLUDE_DIRS="${RMUMPS_INC}"
+    echo "MUMPS headers (rmumps): ${MUMPS_R_INCLUDE_DIRS}"
+fi
+
+# Build the HiGHS QP/LP subproblem solver (static libhighs.a) from source.
+# This enables Uno's SQP presets (e.g. filtersqp). Skip with R_UNO_NO_HIGHS=1.
+HIGHS_PKG_LIBS=""
+HIGHS_CPPFLAGS=""
+if test -z "${R_UNO_NO_HIGHS}"; then
+    bash inst/build_highs.sh || { echo "HiGHS build failed!"; exit 1; }
+    cd "${R_UNO_PKG_HOME}"
+    R_HIGHS_LIB_DIR=${R_UNO_PKG_HOME}/src/highslib
+    # Tell build_uno.sh to compile Uno with HAS_HIGHS + the HiGHSSolver sources.
+    export HIGHS_LIB="${R_HIGHS_LIB_DIR}/lib/libhighs.a"
+    HIGHS_PKG_LIBS="-L${R_HIGHS_LIB_DIR}/lib -lhighs"
+    HIGHS_CPPFLAGS="-I${R_HIGHS_LIB_DIR}/include -I${R_HIGHS_LIB_DIR}/include/highs"
+fi
+
+# Build the Uno static library (src/unolib/{lib,include}).
+bash inst/build_uno.sh || { echo "Uno build failed!"; exit 1; }
+cd "${R_UNO_PKG_HOME}"
+
+R_UNO_LIB_DIR=${R_UNO_PKG_HOME}/src/unolib
+
+# Link flags: the Uno static archive resolves its BLAS/LAPACK/Fortran-runtime
+# externals (and HiGHS, if built) at the final package .so link.
+RUNO_PKG_LIBS="-L${R_UNO_LIB_DIR}/lib -luno ${HIGHS_PKG_LIBS}"
+
+sed -e "s|@RUNO_LIB_DIR@|${R_UNO_LIB_DIR}|g" \
+    -e "s|@RUNO_PKG_LIBS@|${RUNO_PKG_LIBS}|g" \
+    src/Makevars.in > src/Makevars
+
+if [ -z "$(ls ${R_UNO_LIB_DIR} 2>/dev/null | grep 'include')" ]; then
+    echo "Uno headers could not be found!"
+    exit 1
+fi

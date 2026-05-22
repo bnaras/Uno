@@ -1,0 +1,10 @@
+uno_build/
+highs_build/
+src/unolib/
+src/highslib/
+src/Makevars
+src/Makevars.win
+src/*.o
+src/*.so
+docs/
+pkgdown/

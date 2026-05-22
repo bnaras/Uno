@@ -1,0 +1,6 @@
+#!/bin/sh
+
+rm -f src/*.o src/*.so
+rm -f src/Makevars src/Makevars.win
+rm -rf src/unolib src/highslib
+rm -rf uno_build highs_build

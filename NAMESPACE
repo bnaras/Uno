@@ -1,0 +1,6 @@
+# Hand-managed for now. Native routines registered by cpp11 (src/cpp11.cpp);
+# R stubs for [[cpp11::register]] functions in R/cpp11.R (cpp11::cpp_register()).
+useDynLib(Uno, .registration = TRUE)
+
+export(uno_version)
+export(uno_solve)
