@@ -48,6 +48,15 @@ res_err <- uno_solve(
 )
 expect_equal(res_err$optimization_status, 3L)         # UNO_EVALUATION_ERROR
 
+## Everything below exercises the interior-point "ipopt" preset, whose KKT
+## linear solver is MUMPS, reached at runtime from 'rmumps' via
+## R_FindSymbol("dmumps_c","rmumps"). That lookup cannot succeed on Windows (a
+## DLL only exports declared symbols and rmumps.dll does not export dmumps_c),
+## so the Windows build is HiGHS-only and these tests do not apply there. The
+## filtersqp/HiGHS smoke tests above already validate the Windows build.
+if (.Platform$OS.type == "windows")
+  exit_file("ipopt/MUMPS tests skipped on Windows (HiGHS-only build)")
+
 ## @unopy NONE
 ## R smoke test: the interior-point "ipopt" preset on the trivial convex NLP
 ## above, exercising the MUMPS linear-solver path (reached at runtime from the

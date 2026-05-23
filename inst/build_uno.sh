@@ -145,7 +145,9 @@ CMAKE_OPTS="
 if test "$(uname -s)" = "Darwin"; then
     CMAKE_PLATFORM_OPTS="-DCMAKE_HOST_APPLE:bool=ON"
 else
-    CMAKE_PLATFORM_OPTS=""
+    # On Windows/Rtools CMake otherwise defaults to an "NMake"/VS generator and
+    # fails; force the Rtools make. Harmless on Linux (already the default).
+    CMAKE_PLATFORM_OPTS="-G \"Unix Makefiles\""
 fi
 
 eval ${CMAKE_EXE} "${UNO_SRC_DIR}" ${CMAKE_OPTS} ${CMAKE_PLATFORM_OPTS} || exit 1

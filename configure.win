@@ -1,0 +1,59 @@
+#!/bin/sh
+#
+# configure.win -- Windows build of the Uno R package (Rtools/MinGW).
+#
+# Mirrors ./configure but writes src/Makevars.win, and builds WITHOUT MUMPS:
+# the interior-point ("ipopt") preset reaches MUMPS at runtime via
+# R_FindSymbol("dmumps_c","rmumps") (see src/dmumps_shim.c), but a Windows DLL
+# only exports symbols it explicitly declares, and rmumps.dll does not export
+# dmumps_c -- so that lookup cannot succeed on Windows.  We therefore build the
+# HiGHS-only configuration (filtersqp/SQP presets), which covers the convex
+# problems produced by CVXR's dnlp2smooth.  The ipopt tinytest is skipped on
+# Windows accordingly.
+
+R_UNO_PKG_HOME=`pwd`
+
+: ${R_HOME=`R RHOME`}
+if test -z "${R_HOME}"; then
+    echo "'R_HOME' could not be found!"
+    exit 1
+fi
+
+# MUMPS is unavailable on Windows (see header comment) -- force it off so
+# build_uno.sh compiles the HiGHS-only configuration.
+R_UNO_NO_MUMPS=1
+export R_UNO_NO_MUMPS
+
+# Build the HiGHS QP/LP subproblem solver (static libhighs.a) from source.
+HIGHS_PKG_LIBS=""
+if test -z "${R_UNO_NO_HIGHS}"; then
+    bash inst/build_highs.sh || { echo "HiGHS build failed!"; exit 1; }
+    cd "${R_UNO_PKG_HOME}"
+    R_HIGHS_LIB_DIR=${R_UNO_PKG_HOME}/src/highslib
+    export HIGHS_LIB="${R_HIGHS_LIB_DIR}/lib/libhighs.a"
+    HIGHS_PKG_LIBS="-L${R_HIGHS_LIB_DIR}/lib -lhighs"
+fi
+
+# Build the Uno static library (src/unolib/{lib,include}).
+bash inst/build_uno.sh || { echo "Uno build failed!"; exit 1; }
+cd "${R_UNO_PKG_HOME}"
+
+# Drop the bundled source trees on a tarball install (see ./configure for the
+# rationale and the submodule-safety guard).
+if test -d inst/doc; then
+    test -e src/HiGHS/.git || rm -rf src/HiGHS
+    test -e src/uno/.git   || rm -rf src/uno
+fi
+
+R_UNO_LIB_DIR=${R_UNO_PKG_HOME}/src/unolib
+
+RUNO_PKG_LIBS="-L${R_UNO_LIB_DIR}/lib -luno ${HIGHS_PKG_LIBS}"
+
+sed -e "s|@RUNO_LIB_DIR@|${R_UNO_LIB_DIR}|g" \
+    -e "s|@RUNO_PKG_LIBS@|${RUNO_PKG_LIBS}|g" \
+    src/Makevars.in > src/Makevars.win
+
+if [ -z "$(ls ${R_UNO_LIB_DIR} 2>/dev/null | grep 'include')" ]; then
+    echo "Uno headers could not be found!"
+    exit 1
+fi
