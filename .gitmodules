@@ -4,4 +4,5 @@
 	branch = r-pkg
 [submodule "src/HiGHS"]
 	path = src/HiGHS
-	url = https://github.com/ERGO-Code/HiGHS.git
+	url = https://github.com/bnaras/HiGHS.git
+	branch = r-pkg
