@@ -45,6 +45,17 @@ if test -d inst/doc; then
     test -e src/uno/.git   || rm -rf src/uno
 fi
 
+# Remove the intermediate CMake build trees (their generated Makefiles carry
+# CRLF on Windows -> "line endings in Makefiles" WARNING) and normalize CRLF in
+# the installed HiGHS headers (Windows CMake emits CRLF -> "line endings in
+# sources" NOTE).
+rm -rf highs_build uno_build
+if test -d src/highslib/include; then
+    find src/highslib/include -type f -print | while read f; do
+        tr -d '\r' < "$f" > "$f.tmp" && mv "$f.tmp" "$f"
+    done
+fi
+
 R_UNO_LIB_DIR=${R_UNO_PKG_HOME}/src/unolib
 
 RUNO_PKG_LIBS="-L${R_UNO_LIB_DIR}/lib -luno ${HIGHS_PKG_LIBS}"
