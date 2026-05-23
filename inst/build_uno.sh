@@ -57,6 +57,18 @@ export CFLAGS="${CFLAGS} ${CPPFLAGS}"
 export CXXFLAGS="${CXXFLAGS} ${CPPFLAGS}"
 export LDFLAGS=`"${R_HOME}/bin/R" CMD config LDFLAGS`
 
+# R-package console-I/O redirection (mirror of build_highs.sh's HIGHS_R_PRINT).
+# uno/tools/r_io.h (#ifdef UNO_R_PRINT, pulled in via Logger.hpp and the few
+# files using std::cout) routes std::cout/std::cerr to R's console through a
+# streambuf over Rprintf/REprintf, so the std::cout symbol never appears in
+# libuno.a (needed for R CMD check "checking compiled code").  -I<R>/include
+# lets r_io.h find <R_ext/Print.h>/<R_ext/Error.h>.  Uno's C++ uses no C printf
+# or C `stdout` token, so no funopen/fopencookie FILE* redirect is needed and
+# the fix is identically clean on macOS, Linux and Windows.
+UNO_RIO_FLAGS="-DUNO_R_PRINT -I${R_HOME}/include"
+export CFLAGS="${CFLAGS} ${UNO_RIO_FLAGS}"
+export CXXFLAGS="${CXXFLAGS} ${UNO_RIO_FLAGS}"
+
 R_UNO_PKG_HOME=`pwd`
 UNO_SRC_DIR=${R_UNO_PKG_HOME}/src/uno              # Uno C++ source (git submodule)
 UNO_BUILD_DIR=${R_UNO_PKG_HOME}/uno_build

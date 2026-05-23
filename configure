@@ -47,6 +47,19 @@ fi
 bash inst/build_uno.sh || { echo "Uno build failed!"; exit 1; }
 cd "${R_UNO_PKG_HOME}"
 
+# Now that the static libraries (src/highslib, src/unolib) are built, drop the
+# bundled HiGHS and Uno SOURCE trees on a TARBALL install to shrink the
+# installed package -- the binding links the built libs+headers, not the
+# sources.  Mirrors the scip R package's configure, which keys off pre-built
+# vignettes in inst/doc/ as the tarball-install marker.  Extra guard vs. scip:
+# src/HiGHS and src/uno are git SUBMODULES, so we only remove them when they are
+# NOT a submodule working tree (a tarball has no nested .git), to never delete a
+# developer's checked-out source during an in-place `R CMD INSTALL .`.
+if test -d inst/doc; then
+    test -e src/HiGHS/.git || rm -rf src/HiGHS
+    test -e src/uno/.git   || rm -rf src/uno
+fi
+
 R_UNO_LIB_DIR=${R_UNO_PKG_HOME}/src/unolib
 
 # Link flags: the Uno static archive resolves its BLAS/LAPACK/Fortran-runtime

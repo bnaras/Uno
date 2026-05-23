@@ -52,6 +52,17 @@ HIGHS_SRC_DIR=${R_UNO_PKG_HOME}/src/HiGHS
 HIGHS_BUILD_DIR=${R_UNO_PKG_HOME}/highs_build
 HIGHS_INSTALL_DIR=${R_UNO_PKG_HOME}/src/highslib
 
+# R-package console-I/O redirection.  HConfig.h (#ifdef HIGHS_R_PRINT) pulls in
+# highs/io/r_io.h, which routes stdout/printf/std::cout to R so the libc stdout /
+# printf / std::cout symbols never appear in libhighs.a (needed for R CMD check
+# "checking compiled code").  Only standard, universally-supported preprocessor
+# flags are used: -DHIGHS_R_PRINT to enable the hook and -I<R>/include so
+# r_io.h can find <R_ext/Print.h>.  Applied to BOTH C and C++ (the bundled
+# cupdlp_*.c files also emit printf symbols), which is why r_io.h is C-safe.
+HIGHS_RIO_FLAGS="-DHIGHS_R_PRINT -I${R_HOME}/include"
+export CFLAGS="${CFLAGS} ${HIGHS_RIO_FLAGS}"
+export CXXFLAGS="${CXXFLAGS} ${HIGHS_RIO_FLAGS}"
+
 if test ! -f "${HIGHS_SRC_DIR}/CMakeLists.txt"; then
     echo "HiGHS source not found at '${HIGHS_SRC_DIR}'."
     echo "Initialize the submodule: git submodule update --init src/HiGHS"
@@ -91,6 +102,7 @@ CMAKE_OPTS="
     -DCMAKE_VERBOSE_MAKEFILE:bool=ON
     -DCUPDLP_GPU:bool=OFF
     -DUSE_DOTNET_STD_21:bool=OFF
+    -DHIGHS_R_NO_DOC_INSTALL:bool=ON
     ${CCACHE_OPTS}
 "
 
@@ -99,6 +111,16 @@ if test "$(uname -s)" = "Darwin"; then
 else
     CMAKE_PLATFORM_OPTS="-G \"Unix Makefiles\""
 fi
+
+# NOTE on doc files / CITATION.cff: HiGHS's CMakeLists.txt has an install(FILES
+# README.md LICENSE.txt AUTHORS CITATION.cff ... DESTINATION ${CMAKE_INSTALL_DOCDIR})
+# rule.  We pass -DHIGHS_R_NO_DOC_INSTALL=ON (a guarded fork addition) above to
+# skip it entirely: those docs are irrelevant to the consumed libhighs.a, the
+# stripped-from-tarball CITATION.cff would otherwise abort the install with
+# "file INSTALL cannot find ... CITATION.cff", and an installed
+# share/doc/HIGHS/CITATION.cff would trip R CMD check's "CITATION file in a
+# non-standard place" NOTE.  Skipping the doc install avoids both with no
+# placeholder files and no pollution of the unpacked source tree.
 
 eval ${CMAKE_EXE} -S "${HIGHS_SRC_DIR}" -B "${HIGHS_BUILD_DIR}" ${CMAKE_OPTS} ${CMAKE_PLATFORM_OPTS} || exit 1
 ${CMAKE_EXE} --build "${HIGHS_BUILD_DIR}" --target install -j"${UNO_BUILD_JOBS:-4}" || exit 1
