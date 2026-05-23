@@ -19,10 +19,15 @@ if test -z "${R_HOME}"; then
     exit 1
 fi
 
-# MUMPS is unavailable on Windows (see header comment) -- force it off so
-# build_uno.sh compiles the HiGHS-only configuration.
-R_UNO_NO_MUMPS=1
-export R_UNO_NO_MUMPS
+# PROBE: enable MUMPS on Windows to empirically test whether dmumps_c resolves
+# from rmumps via R_FindSymbol at runtime (MinGW may auto-export all symbols).
+RMUMPS_INC=`"${R_HOME}/bin/Rscript" -e 'cat(system.file("include", package="rmumps"))'`
+if test -z "${RMUMPS_INC}" || test ! -f "${RMUMPS_INC}/dmumps_c.h"; then
+    echo "rmumps headers not found (looked in '${RMUMPS_INC}')."
+    exit 1
+fi
+export MUMPS_R_INCLUDE_DIRS="${RMUMPS_INC}"
+echo "MUMPS headers (rmumps): ${MUMPS_R_INCLUDE_DIRS}"
 
 # Build the HiGHS QP/LP subproblem solver (static libhighs.a) from source.
 HIGHS_PKG_LIBS=""

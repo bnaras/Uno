@@ -54,8 +54,14 @@ expect_equal(res_err$optimization_status, 3L)         # UNO_EVALUATION_ERROR
 ## DLL only exports declared symbols and rmumps.dll does not export dmumps_c),
 ## so the Windows build is HiGHS-only and these tests do not apply there. The
 ## filtersqp/HiGHS smoke tests above already validate the Windows build.
-if (.Platform$OS.type == "windows")
-  exit_file("ipopt/MUMPS tests skipped on Windows (HiGHS-only build)")
+## PROBE (Windows): report whether rmumps' dmumps_c is discoverable, then let
+## the ipopt/MUMPS tests below run on Windows too (instead of exit_file()).
+if (.Platform$OS.type == "windows") {
+  si <- tryCatch(getNativeSymbolInfo("dmumps_c", PACKAGE = "rmumps"),
+                 error = function(e) conditionMessage(e))
+  cat("WINPROBE dmumps_c (getNativeSymbolInfo):",
+      if (is.character(si)) si else "FOUND", "\n")
+}
 
 ## @unopy NONE
 ## R smoke test: the interior-point "ipopt" preset on the trivial convex NLP
