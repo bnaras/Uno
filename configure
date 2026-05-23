@@ -47,6 +47,32 @@ fi
 bash inst/build_uno.sh || { echo "Uno build failed!"; exit 1; }
 cd "${R_UNO_PKG_HOME}"
 
+# Now that the static libraries (src/highslib, src/unolib) are built, drop the
+# bundled HiGHS and Uno SOURCE trees on a TARBALL install to shrink the
+# installed package -- the binding links the built libs+headers, not the
+# sources.  Mirrors the scip R package's configure, which keys off pre-built
+# vignettes in inst/doc/ as the tarball-install marker.  Extra guard vs. scip:
+# src/HiGHS and src/uno are git SUBMODULES, so we only remove them when they are
+# NOT a submodule working tree (a tarball has no nested .git), to never delete a
+# developer's checked-out source during an in-place `R CMD INSTALL .`.
+if test -d inst/doc; then
+    test -e src/HiGHS/.git || rm -rf src/HiGHS
+    test -e src/uno/.git   || rm -rf src/uno
+fi
+
+# Remove the intermediate CMake build trees: the libraries are installed under
+# src/highslib and src/unolib, so the build dirs are dead weight, and their
+# CMake-generated Makefiles carry CRLF line endings on Windows -> R CMD check
+# "line endings in Makefiles" WARNING.  Also normalize CRLF -> LF in the
+# installed HiGHS headers (Windows CMake emits CRLF -> "line endings in sources"
+# NOTE).  Both are no-ops on Unix.
+rm -rf highs_build uno_build
+if test -d src/highslib/include; then
+    find src/highslib/include -type f -print | while read f; do
+        tr -d '\r' < "$f" > "$f.tmp" && mv "$f.tmp" "$f"
+    done
+fi
+
 R_UNO_LIB_DIR=${R_UNO_PKG_HOME}/src/unolib
 
 # Link flags: the Uno static archive resolves its BLAS/LAPACK/Fortran-runtime

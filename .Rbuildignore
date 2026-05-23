@@ -16,3 +16,5 @@
 ^src/uno/\.
 ^src/HiGHS/CITATION\.cff$
 ^src/uno/CITATION\.cff$
+^src/uno/interfaces/R$
+^src/uno/interfaces/Python$
