@@ -28,8 +28,8 @@ res <- uno_solve(
   hess_rows = c(0L, 1L), hess_cols = c(0L, 1L), hess = hess,
   x0 = c(0, 0), preset = "filtersqp", base_indexing = 0L, verbose = FALSE
 )
-expect_equal(res$optimization_status, 0L)            # UNO_SUCCESS
-expect_equal(res$solution_status, 1L)                 # UNO_FEASIBLE_KKT_POINT
+expect_equal(res$optimization_status, "SUCCESS")
+expect_equal(res$solution_status, "FEASIBLE_KKT_POINT")
 expect_equal(res$objective, 0, tolerance = 1e-6)
 expect_equal(res$primal, c(1, 2), tolerance = 1e-5)
 
@@ -46,7 +46,7 @@ res_err <- uno_solve(
   hess_rows = c(0L, 1L), hess_cols = c(0L, 1L), hess = hess,
   x0 = c(0, 0), preset = "filtersqp", base_indexing = 0L, verbose = FALSE
 )
-expect_equal(res_err$optimization_status, 3L)         # UNO_EVALUATION_ERROR
+expect_equal(res_err$optimization_status, "EVALUATION_ERROR")
 
 ## Everything below exercises the interior-point "ipopt" preset, whose KKT
 ## linear solver is MUMPS, reached at runtime from 'rmumps' via
@@ -69,8 +69,8 @@ res_ip <- uno_solve(
   hess_rows = c(0L, 1L), hess_cols = c(0L, 1L), hess = hess,
   x0 = c(0, 0), preset = "ipopt", base_indexing = 0L, verbose = FALSE
 )
-expect_equal(res_ip$optimization_status, 0L)          # UNO_SUCCESS
-expect_equal(res_ip$solution_status, 1L)              # UNO_FEASIBLE_KKT_POINT
+expect_equal(res_ip$optimization_status, "SUCCESS")
+expect_equal(res_ip$solution_status, "FEASIBLE_KKT_POINT")
 expect_equal(res_ip$objective, 0, tolerance = 1e-6)
 expect_equal(res_ip$primal, c(1, 2), tolerance = 1e-5)
 
@@ -104,8 +104,8 @@ res_hs015 <- uno_solve(
   hess_rows = c(0L, 1L, 1L), hess_cols = c(0L, 0L, 1L), hess = hs015_hess,
   x0 = c(-2, 1), preset = "ipopt", base_indexing = 0L, verbose = FALSE
 )
-expect_equal(res_hs015$optimization_status, 0L)       # UNO_SUCCESS
-expect_equal(res_hs015$solution_status, 1L)           # UNO_FEASIBLE_KKT_POINT
+expect_equal(res_hs015$optimization_status, "SUCCESS")
+expect_equal(res_hs015$solution_status, "FEASIBLE_KKT_POINT")
 expect_equal(res_hs015$objective, 306.5, tolerance = 1e-4)  # example asserts <= 1e-4
 expect_equal(res_hs015$primal, c(0.5, 2.0), tolerance = 1e-4)
 ## duals are returned for both constraints and both bounds (HS015 has an active

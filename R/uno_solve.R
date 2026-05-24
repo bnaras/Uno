@@ -26,14 +26,27 @@
 #'   (so they override it), e.g. `list(max_iterations = 200L, tolerance = 1e-8,
 #'   linear_solver = "MUMPS")`. Each value is coerced to the option's declared
 #'   Uno type; an unknown option name or an unacceptable value raises an error.
-#' @return a named list with the optimization/solution status, objective,
+#' @param lagrangian_sign the Lagrangian multiplier sign convention the `hess`
+#'   callback uses: `"positive"` for \eqn{L = \sigma f + y^\top c} (the standard
+#'   convention used by IPOPT and the sparsediff oracle) or `"negative"` for
+#'   \eqn{L = \sigma f - y^\top c}. Defaults to `"negative"`, matching Uno's own
+#'   C-API default. **Must match the convention your `hess` returns**, otherwise
+#'   the Lagrangian Hessian's constraint terms get the wrong sign (invisible
+#'   when all constraints are linear, since their Hessian is zero).
+#' @param dual0 optional warm-start dual iterate, or `NULL` (Uno's default).
+#' @return a named list with the optimization/solution status (canonical
+#'   character names, e.g. `"SUCCESS"`, `"FEASIBLE_KKT_POINT"`), objective,
 #'   primal and dual solutions, KKT residuals, and per-callback evaluation
 #'   counters.
 #' @export
 uno_solve <- function(n, lb, ub, sense, obj, grad, m, cl, cu, cons,
                       jac_rows, jac_cols, jac, hess_rows, hess_cols, hess,
-                      x0, preset, base_indexing, verbose, options = list()) {
+                      x0, preset, base_indexing, verbose, options = list(),
+                      lagrangian_sign = c("negative", "positive"),
+                      dual0 = NULL) {
+  lagrangian_sign <- match.arg(lagrangian_sign)
   uno_solve_impl(n, lb, ub, sense, obj, grad, m, cl, cu, cons,
                  jac_rows, jac_cols, jac, hess_rows, hess_cols, hess,
-                 x0, preset, base_indexing, verbose, options)
+                 x0, preset, base_indexing, verbose, options,
+                 lagrangian_sign, dual0)
 }

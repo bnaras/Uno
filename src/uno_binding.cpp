@@ -224,13 +224,41 @@ static void apply_solver_options(void* solver, SEXP options) {
 //
 // Returns a named list with the status, objective, primal/dual solutions,
 // iteration count, KKT residuals and per-callback evaluation counters.
+
+// Canonical string names for Uno's optimization/solution status enums, so the
+// R surface mirrors unopy / CVXPY's string-keyed STATUS_MAP (robust to enum
+// reordering). Uno_C_API.h: optimization_status 0..4, solution_status 0..6.
+static std::string optimization_status_name(uno_int s) {
+  switch (s) {
+    case UNO_SUCCESS:           return "SUCCESS";
+    case UNO_ITERATION_LIMIT:   return "ITERATION_LIMIT";
+    case UNO_TIME_LIMIT:        return "TIME_LIMIT";
+    case UNO_EVALUATION_ERROR:  return "EVALUATION_ERROR";
+    case UNO_ALGORITHMIC_ERROR: return "ALGORITHMIC_ERROR";
+    default:                    return "UNKNOWN";
+  }
+}
+static std::string solution_status_name(uno_int s) {
+  switch (s) {
+    case UNO_NOT_OPTIMAL:                  return "NOT_OPTIMAL";
+    case UNO_FEASIBLE_KKT_POINT:           return "FEASIBLE_KKT_POINT";
+    case UNO_FEASIBLE_FJ_POINT:            return "FEASIBLE_FJ_POINT";
+    case UNO_INFEASIBLE_STATIONARY_POINT:  return "INFEASIBLE_STATIONARY_POINT";
+    case UNO_FEASIBLE_SMALL_STEP:          return "FEASIBLE_SMALL_STEP";
+    case UNO_INFEASIBLE_SMALL_STEP:        return "INFEASIBLE_SMALL_STEP";
+    case UNO_UNBOUNDED:                    return "UNBOUNDED";
+    default:                               return "UNKNOWN";
+  }
+}
+
 [[cpp11::register]]
 cpp11::list uno_solve_impl(int n, cpp11::doubles lb, cpp11::doubles ub, std::string sense,
                       SEXP obj, SEXP grad, int m, cpp11::doubles cl, cpp11::doubles cu,
                       SEXP cons, cpp11::integers jac_rows, cpp11::integers jac_cols,
                       SEXP jac, cpp11::integers hess_rows, cpp11::integers hess_cols,
                       SEXP hess, cpp11::doubles x0, std::string preset,
-                      int base_indexing, bool verbose, cpp11::list options) {
+                      int base_indexing, bool verbose, cpp11::list options,
+                      std::string lagrangian_sign, SEXP dual0) {
   RCallbacks cb;
   cb.obj = obj;
   cb.grad = grad;
@@ -266,10 +294,21 @@ cpp11::list uno_solve_impl(int n, cpp11::doubles lb, cpp11::doubles ub, std::str
     uno_set_lagrangian_hessian(model, static_cast<uno_int>(hrows.size()),
                                UNO_LOWER_TRIANGLE, hrows.data(), hcols.data(),
                                lagrangian_hessian_trampoline);
-    uno_set_lagrangian_sign_convention(model, UNO_MULTIPLIER_NEGATIVE);
+    // C1: caller-chosen Lagrangian sign convention. The diff-engine oracle
+    // (sparsediff) returns sigma*Hf + sum_i lambda_i*Hg_i = L = sigma*f + y^T c,
+    // i.e. UNO_MULTIPLIER_POSITIVE; CVXR passes "positive". Default "negative"
+    // matches Uno's own C-API default.
+    const uno_int sign_conv = (lagrangian_sign == "positive")
+        ? UNO_MULTIPLIER_POSITIVE : UNO_MULTIPLIER_NEGATIVE;
+    uno_set_lagrangian_sign_convention(model, sign_conv);
   }
 
   uno_set_initial_primal_iterate(model, REAL(x0));
+  // C3: optional warm-start dual iterate (length m + 2n bound duals per Uno's
+  // layout; the caller supplies the full vector). NULL -> Uno's default.
+  if (dual0 != R_NilValue) {
+    uno_set_initial_dual_iterate(model, REAL(dual0));
+  }
 
   // --- solver ------------------------------------------------------------
   void* solver = uno_create_solver();
@@ -304,8 +343,9 @@ cpp11::list uno_solve_impl(int n, cpp11::doubles lb, cpp11::doubles ub, std::str
   };
 
   cpp11::writable::list out({
-      "optimization_status"_nm = static_cast<int>(opt_status),
-      "solution_status"_nm = static_cast<int>(sol_status),
+      // C2: canonical string status names (mirror unopy / CVXPY STATUS_MAP keys)
+      "optimization_status"_nm = optimization_status_name(opt_status),
+      "solution_status"_nm = solution_status_name(sol_status),
       "objective"_nm = objective,
       "primal"_nm = to_dbls(primal),
       "constraint_dual"_nm = to_dbls(con_dual),
