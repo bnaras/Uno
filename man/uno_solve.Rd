@@ -93,10 +93,13 @@ stream in chunks (a sink for the solver log); `NULL` leaves output on
 stdout. Independent of `verbose` (which controls how much Uno prints).}
 }
 \value{
-a named list with the optimization/solution status (canonical
-  character names, e.g. `"SUCCESS"`, `"FEASIBLE_KKT_POINT"`), objective,
-  primal and dual solutions, KKT residuals, and per-callback evaluation
-  counters.
+a named list. The `optimization_status` and `solution_status` are
+  **named integers** of the form `c(SUCCESS = 0L)`: the value is Uno's enum
+  code and the name is its canonical label, so you can key a status map by
+  `names(status)` and still read the code (e.g. `status[[1L]]`). The list
+  also holds the objective, primal and dual solutions (`constraint_dual`,
+  `lower_bound_dual`, `upper_bound_dual`), KKT residuals, and per-callback
+  evaluation counters.
 }
 \description{
 Solve a nonlinear program with Uno

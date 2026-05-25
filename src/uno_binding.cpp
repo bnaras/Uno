@@ -309,6 +309,16 @@ static std::string solution_status_name(uno_int s) {
   }
 }
 
+// A status returned as a named integer (the idiomatic R form): the value is
+// Uno's enum code, the name is its canonical label, e.g. c(SUCCESS = 0L). The
+// caller gets both -- numeric comparison and a string key, via names().
+static cpp11::writable::integers named_status(uno_int code, const std::string& name) {
+  cpp11::writable::integers v(1);
+  v[0] = static_cast<int>(code);
+  v.names() = cpp11::writable::strings({name});
+  return v;
+}
+
 [[cpp11::register]]
 cpp11::list uno_solve_impl(int n, cpp11::doubles lb, cpp11::doubles ub, std::string sense,
                       SEXP obj, SEXP grad, int m, cpp11::doubles cl, cpp11::doubles cu,
@@ -417,9 +427,10 @@ cpp11::list uno_solve_impl(int n, cpp11::doubles lb, cpp11::doubles ub, std::str
   };
 
   cpp11::writable::list out({
-      // C2: canonical string status names (mirror unopy / CVXPY STATUS_MAP keys)
-      "optimization_status"_nm = optimization_status_name(opt_status),
-      "solution_status"_nm = solution_status_name(sol_status),
+      // C2: status as a named integer c(LABEL = code) -- carries both Uno's
+      // enum code and its canonical label (key a status map by names()).
+      "optimization_status"_nm = named_status(opt_status, optimization_status_name(opt_status)),
+      "solution_status"_nm = named_status(sol_status, solution_status_name(sol_status)),
       "objective"_nm = objective,
       "primal"_nm = to_dbls(primal),
       "constraint_dual"_nm = to_dbls(con_dual),

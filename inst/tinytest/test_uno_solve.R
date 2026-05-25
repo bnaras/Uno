@@ -28,8 +28,13 @@ res <- uno_solve(
   hess_rows = c(0L, 1L), hess_cols = c(0L, 1L), hess = hess,
   x0 = c(0, 0), preset = "filtersqp", base_indexing = 0L, verbose = FALSE
 )
-expect_equal(res$optimization_status, "SUCCESS")
-expect_equal(res$solution_status, "FEASIBLE_KKT_POINT")
+## status is a named integer c(LABEL = code): names() gives the canonical label
+## (e.g. to key a status map), and the integer code is preserved too. Note the
+## R subtlety -- `x[1]` keeps the name, `x[[1]]` drops it to the bare code.
+expect_equal(res$optimization_status, c(SUCCESS = 0L))
+expect_equal(names(res$optimization_status), "SUCCESS")   # name survives the round-trip
+expect_equal(res$optimization_status[[1L]], 0L)            # [[ ]] -> bare code
+expect_equal(res$solution_status, c(FEASIBLE_KKT_POINT = 1L))
 expect_equal(res$objective, 0, tolerance = 1e-6)
 expect_equal(res$primal, c(1, 2), tolerance = 1e-5)
 
@@ -46,7 +51,7 @@ res_err <- uno_solve(
   hess_rows = c(0L, 1L), hess_cols = c(0L, 1L), hess = hess,
   x0 = c(0, 0), preset = "filtersqp", base_indexing = 0L, verbose = FALSE
 )
-expect_equal(res_err$optimization_status, "EVALUATION_ERROR")
+expect_equal(res_err$optimization_status, c(EVALUATION_ERROR = 3L))
 
 ## Everything below exercises the interior-point "ipopt" preset, whose KKT
 ## linear solver is MUMPS, reached at runtime from 'rmumps' via
@@ -69,8 +74,8 @@ res_ip <- uno_solve(
   hess_rows = c(0L, 1L), hess_cols = c(0L, 1L), hess = hess,
   x0 = c(0, 0), preset = "ipopt", base_indexing = 0L, verbose = FALSE
 )
-expect_equal(res_ip$optimization_status, "SUCCESS")
-expect_equal(res_ip$solution_status, "FEASIBLE_KKT_POINT")
+expect_equal(res_ip$optimization_status, c(SUCCESS = 0L))
+expect_equal(res_ip$solution_status, c(FEASIBLE_KKT_POINT = 1L))
 expect_equal(res_ip$objective, 0, tolerance = 1e-6)
 expect_equal(res_ip$primal, c(1, 2), tolerance = 1e-5)
 
@@ -104,8 +109,8 @@ res_hs015 <- uno_solve(
   hess_rows = c(0L, 1L, 1L), hess_cols = c(0L, 0L, 1L), hess = hs015_hess,
   x0 = c(-2, 1), preset = "ipopt", base_indexing = 0L, verbose = FALSE
 )
-expect_equal(res_hs015$optimization_status, "SUCCESS")
-expect_equal(res_hs015$solution_status, "FEASIBLE_KKT_POINT")
+expect_equal(res_hs015$optimization_status, c(SUCCESS = 0L))
+expect_equal(res_hs015$solution_status, c(FEASIBLE_KKT_POINT = 1L))
 expect_equal(res_hs015$objective, 306.5, tolerance = 1e-4)  # example asserts <= 1e-4
 expect_equal(res_hs015$primal, c(0.5, 2.0), tolerance = 1e-4)
 ## duals are returned for both constraints and both bounds (HS015 has an active
@@ -170,7 +175,7 @@ res_pos <- uno_solve(
   x0 = c(-2, 1), preset = "ipopt", base_indexing = 0L, verbose = FALSE,
   lagrangian_sign = "positive"
 )
-expect_equal(res_pos$optimization_status, "SUCCESS")
+expect_equal(res_pos$optimization_status, c(SUCCESS = 0L))
 expect_equal(res_pos$objective, 306.5, tolerance = 1e-4)
 expect_equal(res_pos$primal, c(0.5, 2.0), tolerance = 1e-4)
 
@@ -188,7 +193,7 @@ res_cb <- uno_solve(
   iter_callback = function(info) { cb_calls <<- cb_calls + 1L; cb_info <<- info; FALSE }
 )
 expect_true(cb_calls >= 1L)
-expect_equal(res_cb$optimization_status, "SUCCESS")
+expect_equal(res_cb$optimization_status, c(SUCCESS = 0L))
 expect_true(all(c("primals", "constraint_dual", "stationarity") %in% names(cb_info)))
 expect_equal(length(cb_info$primals), 2L)
 
@@ -203,7 +208,8 @@ res_term <- uno_solve(
   iter_callback = function(info) { term_calls <<- term_calls + 1L; TRUE }
 )
 expect_true(term_calls >= 1L)
-expect_true(is.character(res_term$optimization_status))
+expect_true(is.integer(res_term$optimization_status))
+expect_false(is.null(names(res_term$optimization_status)))   # name preserved
 
 ## @unopy NONE
 ## C5: log_callback receives Uno's output stream (a sink for the solver log).
