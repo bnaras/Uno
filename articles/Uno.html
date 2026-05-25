@@ -117,6 +117,17 @@ Hessian is the <strong>lower triangle</strong> of the Lagrangian
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">sigma</span> <span class="op">*</span> <span class="op">(</span><span class="fl">1200</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">^</span><span class="fl">2</span> <span class="op">-</span> <span class="fl">400</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span> <span class="op">+</span> <span class="fl">2</span><span class="op">)</span>,</span>
 <span>    <span class="op">-</span><span class="fl">400</span> <span class="op">*</span> <span class="va">sigma</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">-</span> <span class="va">lambda</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span>,</span>
 <span>    <span class="fl">200</span> <span class="op">*</span> <span class="va">sigma</span> <span class="op">-</span> <span class="fl">2</span> <span class="op">*</span> <span class="va">lambda</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span><span class="op">)</span></span></code></pre></div>
+<p>By default Uno uses the <strong>negative</strong> Lagrangian
+convention,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi><mo>=</mo><mi>σ</mi><mi>f</mi><mo>−</mo><msup><mi>y</mi><mi>⊤</mi></msup><mi>c</mi></mrow><annotation encoding="application/x-tex">L = \sigma f - y^\top c</annotation></semantics></math>
+– which is why the Hessian above <em>subtracts</em> the
+<code>lambda</code> terms. If your Hessian instead returns
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>σ</mi><msup><mi>∇</mi><mn>2</mn></msup><mi>f</mi><mo>+</mo><msub><mo>∑</mo><mi>i</mi></msub><msub><mi>λ</mi><mi>i</mi></msub><msup><mi>∇</mi><mn>2</mn></msup><msub><mi>g</mi><mi>i</mi></msub></mrow><annotation encoding="application/x-tex">\sigma\nabla^2 f + \sum_i \lambda_i \nabla^2 g_i</annotation></semantics></math>
+(the convention used by IPOPT and by CVXR’s <code>sparsediff</code>
+oracle), pass <code>lagrangian_sign = "positive"</code> so the
+constraint-Hessian terms get the right sign. With only <em>linear</em>
+constraints the constraint Hessian is zero and the choice does not
+matter.</p>
 </div>
 <div class="section level3">
 <h3 id="solving-with-the-interior-point-preset">Solving with the interior-point preset<a class="anchor" aria-label="anchor" href="#solving-with-the-interior-point-preset"></a>
@@ -135,15 +146,26 @@ pass <code>options = list(logger = "SILENT")</code> to keep Uno quiet
 <span>  options <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>logger <span class="op">=</span> <span class="st">"SILENT"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">res</span><span class="op">$</span><span class="va">optimization_status</span>   <span class="co"># 0 = success</span></span>
-<span><span class="co">#&gt; [1] 0</span></span>
+<span><span class="va">res</span><span class="op">$</span><span class="va">optimization_status</span>   <span class="co"># named integer: c(SUCCESS = 0L)</span></span>
+<span><span class="co">#&gt; SUCCESS </span></span>
+<span><span class="co">#&gt;       0</span></span>
 <span><span class="va">res</span><span class="op">$</span><span class="va">objective</span>             <span class="co"># 306.5</span></span>
 <span><span class="co">#&gt; [1] 306.5</span></span>
 <span><span class="va">res</span><span class="op">$</span><span class="va">primal</span>                <span class="co"># (0.5, 2)</span></span>
 <span><span class="co">#&gt; [1] 0.5 2.0</span></span></code></pre></div>
+<p><code>optimization_status</code> (and <code>solution_status</code>)
+are returned as <strong>named integers</strong> – the value is Uno’s
+enum code and the name its canonical label. Use <code><a href="https://rdrr.io/r/base/names.html" class="external-link">names()</a></code> for
+the label and <code>[[1]]</code> for the bare code (recall
+<code>x[1]</code> keeps the name, <code>x[[1]]</code> drops it):</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">res</span><span class="op">$</span><span class="va">optimization_status</span><span class="op">)</span>   <span class="co"># "SUCCESS"</span></span>
+<span><span class="co">#&gt; [1] "SUCCESS"</span></span>
+<span><span class="va">res</span><span class="op">$</span><span class="va">optimization_status</span><span class="op">[[</span><span class="fl">1L</span><span class="op">]</span><span class="op">]</span>    <span class="co"># 0L</span></span>
+<span><span class="co">#&gt; [1] 0</span></span></code></pre></div>
 <p>The result also carries the dual solution and a set of diagnostic
 counters:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">res</span><span class="op">$</span><span class="va">constraint_dual</span></span>
 <span><span class="co">#&gt; [1] 7.000000e+02 5.568458e-10</span></span>
 <span><span class="va">res</span><span class="op">$</span><span class="va">iterations</span></span>
@@ -151,7 +173,7 @@ counters:</p>
 <span><span class="va">res</span><span class="op">$</span><span class="va">objective_evaluations</span></span>
 <span><span class="co">#&gt; [1] 22</span></span>
 <span><span class="va">res</span><span class="op">$</span><span class="va">cpu_time</span></span>
-<span><span class="co">#&gt; [1] 0.02268</span></span></code></pre></div>
+<span><span class="co">#&gt; [1] 0.022639</span></span></code></pre></div>
 </div>
 </div>
 <div class="section level2">
@@ -161,7 +183,7 @@ counters:</p>
 through <code>options</code> as a named list; values are coerced to each
 option’s declared type, and the options are applied <em>after</em> the
 preset so they override it. A few useful ones:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># cap the iteration count</span></span>
 <span><span class="fu"><a href="../reference/uno_solve.html">uno_solve</a></span><span class="op">(</span><span class="va">...</span>, preset <span class="op">=</span> <span class="st">"ipopt"</span>, options <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>max_iterations <span class="op">=</span> <span class="fl">50L</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>

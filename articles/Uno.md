@@ -59,6 +59,15 @@ hessian <- function(x, sigma, lambda)
     200 * sigma - 2 * lambda[2])
 ```
 
+By default Uno uses the **negative** Lagrangian convention,
+$`L = \sigma f - y^\top c`$ – which is why the Hessian above *subtracts*
+the `lambda` terms. If your Hessian instead returns
+$`\sigma\nabla^2 f + \sum_i \lambda_i \nabla^2 g_i`$ (the convention
+used by IPOPT and by CVXR’s `sparsediff` oracle), pass
+`lagrangian_sign = "positive"` so the constraint-Hessian terms get the
+right sign. With only *linear* constraints the constraint Hessian is
+zero and the choice does not matter.
+
 ### Solving with the interior-point preset
 
 The `ipopt` preset uses MUMPS as its linear solver. We pass
@@ -77,12 +86,27 @@ res <- uno_solve(
   options = list(logger = "SILENT")
 )
 
-res$optimization_status   # 0 = success
-#> [1] 0
+res$optimization_status   # named integer: c(SUCCESS = 0L)
+#> SUCCESS 
+#>       0
 res$objective             # 306.5
 #> [1] 306.5
 res$primal                # (0.5, 2)
 #> [1] 0.5 2.0
+```
+
+`optimization_status` (and `solution_status`) are returned as **named
+integers** – the value is Uno’s enum code and the name its canonical
+label. Use [`names()`](https://rdrr.io/r/base/names.html) for the label
+and `[[1]]` for the bare code (recall `x[1]` keeps the name, `x[[1]]`
+drops it):
+
+``` r
+
+names(res$optimization_status)   # "SUCCESS"
+#> [1] "SUCCESS"
+res$optimization_status[[1L]]    # 0L
+#> [1] 0
 ```
 
 The result also carries the dual solution and a set of diagnostic
@@ -97,7 +121,7 @@ res$iterations
 res$objective_evaluations
 #> [1] 22
 res$cpu_time
-#> [1] 0.02268
+#> [1] 0.022639
 ```
 
 ## Solver options

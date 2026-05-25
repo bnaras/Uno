@@ -26,7 +26,11 @@ uno_solve(
   preset,
   base_indexing,
   verbose,
-  options = list()
+  options = list(),
+  lagrangian_sign = c("negative", "positive"),
+  dual0 = NULL,
+  iter_callback = NULL,
+  log_callback = NULL
 )
 ```
 
@@ -103,7 +107,44 @@ uno_solve(
   declared Uno type; an unknown option name or an unacceptable value
   raises an error.
 
+- lagrangian_sign:
+
+  the Lagrangian multiplier sign convention the \`hess\` callback uses:
+  \`"positive"\` for \\L = \sigma f + y^\top c\\ (the standard
+  convention used by IPOPT and the sparsediff oracle) or \`"negative"\`
+  for \\L = \sigma f - y^\top c\\. Defaults to \`"negative"\`, matching
+  Uno's own C-API default. \*\*Must match the convention your \`hess\`
+  returns\*\*, otherwise the Lagrangian Hessian's constraint terms get
+  the wrong sign (invisible when all constraints are linear, since their
+  Hessian is zero).
+
+- dual0:
+
+  optional warm-start dual iterate, or \`NULL\` (Uno's default).
+
+- iter_callback:
+
+  optional \`function(info)\` called at each acceptable iterate; return
+  \`TRUE\` to terminate the solve early. \`info\` is a named list with
+  \`primals\`, \`lower_bound_dual\`, \`upper_bound_dual\`,
+  \`constraint_dual\`, \`objective_multiplier\`, and the
+  \`primal_feasibility\`/\`stationarity\`/ \`complementarity\`
+  residuals. Errors in the callback are caught and treated as "do not
+  terminate". \`NULL\` disables it.
+
+- log_callback:
+
+  optional \`function(text)\` that receives Uno's output stream in
+  chunks (a sink for the solver log); \`NULL\` leaves output on stdout.
+  Independent of \`verbose\` (which controls how much Uno prints).
+
 ## Value
 
-a named list with the optimization/solution status, objective, primal
-and dual solutions, KKT residuals, and per-callback evaluation counters.
+a named list. The \`optimization_status\` and \`solution_status\` are
+\*\*named integers\*\* of the form \`c(SUCCESS = 0L)\`: the value is
+Uno's enum code and the name is its canonical label, so you can key a
+status map by \`names(status)\` and still read the code (e.g.
+\`status\[\[1L\]\]\`). The list also holds the objective, primal and
+dual solutions (\`constraint_dual\`, \`lower_bound_dual\`,
+\`upper_bound_dual\`), KKT residuals, and per-callback evaluation
+counters.
