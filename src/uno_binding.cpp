@@ -31,6 +31,8 @@ struct RCallbacks {
   SEXP cons;  // function(x) -> double[m]
   SEXP jac;   // function(x) -> double[nnz_jac]   (COO order)
   SEXP hess;  // function(x, sigma, lambda) -> double[nnz_hess] (lower-tri COO)
+  SEXP iter;  // C4: function(info_list) -> logical (TRUE terminates); or NULL
+  SEXP log;   // C5: function(text) -> NULL (logger stream sink); or NULL
 };
 
 // Wrap a C buffer as a REALSXP the R closure can read. Caller PROTECTs.
@@ -118,6 +120,62 @@ uno_int lagrangian_hessian_trampoline(uno_int n, uno_int m, uno_int nnz,
   uno_int rc = eval_into(call, hessian_values, nnz);
   UNPROTECT(4);
   return rc;
+}
+
+// C4: termination callback. Passes the acceptable iterate (primals,
+// bound/constraint multipliers, objective multiplier, KKT residuals) to the R
+// `iter` closure as a named list; the closure returns TRUE to stop the solve.
+// An R error in the closure is caught (R_tryEval) and treated as "do not
+// terminate" -- progress callbacks must never longjmp through Uno's optimize().
+uno_int termination_trampoline(uno_int n, uno_int m, const double* primals,
+                               const double* lb_mult, const double* ub_mult,
+                               const double* con_mult, double obj_mult,
+                               double primal_feas, double stationarity,
+                               double complementarity, void* user_data) {
+  RCallbacks* cb = static_cast<RCallbacks*>(user_data);
+  SEXP info = PROTECT(Rf_allocVector(VECSXP, 8));
+  SEXP names = PROTECT(Rf_allocVector(STRSXP, 8));
+  SET_VECTOR_ELT(info, 0, make_x(primals, n));
+  SET_VECTOR_ELT(info, 1, make_x(lb_mult, n));
+  SET_VECTOR_ELT(info, 2, make_x(ub_mult, n));
+  SET_VECTOR_ELT(info, 3, make_x(con_mult, m));
+  SET_VECTOR_ELT(info, 4, Rf_ScalarReal(obj_mult));
+  SET_VECTOR_ELT(info, 5, Rf_ScalarReal(primal_feas));
+  SET_VECTOR_ELT(info, 6, Rf_ScalarReal(stationarity));
+  SET_VECTOR_ELT(info, 7, Rf_ScalarReal(complementarity));
+  SET_STRING_ELT(names, 0, Rf_mkChar("primals"));
+  SET_STRING_ELT(names, 1, Rf_mkChar("lower_bound_dual"));
+  SET_STRING_ELT(names, 2, Rf_mkChar("upper_bound_dual"));
+  SET_STRING_ELT(names, 3, Rf_mkChar("constraint_dual"));
+  SET_STRING_ELT(names, 4, Rf_mkChar("objective_multiplier"));
+  SET_STRING_ELT(names, 5, Rf_mkChar("primal_feasibility"));
+  SET_STRING_ELT(names, 6, Rf_mkChar("stationarity"));
+  SET_STRING_ELT(names, 7, Rf_mkChar("complementarity"));
+  Rf_setAttrib(info, R_NamesSymbol, names);
+  SEXP call = PROTECT(Rf_lang2(cb->iter, info));
+  int err = 0;
+  SEXP res = R_tryEval(call, R_GlobalEnv, &err);
+  uno_int terminate = 0;
+  if (!err && res != R_NilValue && Rf_xlength(res) >= 1 &&
+      Rf_asLogical(res) == TRUE) {
+    terminate = 1;
+  }
+  UNPROTECT(3);
+  return terminate;
+}
+
+// C5: logger stream callback. Forwards each Uno output buffer to the R `log`
+// closure as a single string. Errors are swallowed (never propagate through
+// Uno's C++ output path). user_data carries the RCallbacks.
+uno_int logger_trampoline(const char* buffer, uno_int length, void* user_data) {
+  RCallbacks* cb = static_cast<RCallbacks*>(user_data);
+  SEXP txt = PROTECT(Rf_ScalarString(
+      Rf_mkCharLen(buffer, static_cast<int>(length))));
+  SEXP call = PROTECT(Rf_lang2(cb->log, txt));
+  int err = 0;
+  R_tryEval(call, R_GlobalEnv, &err);
+  UNPROTECT(2);
+  return 0;
 }
 
 // Copy a cpp11::integers into a contiguous uno_int (int32) buffer.
@@ -224,19 +282,60 @@ static void apply_solver_options(void* solver, SEXP options) {
 //
 // Returns a named list with the status, objective, primal/dual solutions,
 // iteration count, KKT residuals and per-callback evaluation counters.
+
+// Canonical string names for Uno's optimization/solution status enums, so the
+// R surface mirrors unopy / CVXPY's string-keyed STATUS_MAP (robust to enum
+// reordering). Uno_C_API.h: optimization_status 0..4, solution_status 0..6.
+static std::string optimization_status_name(uno_int s) {
+  switch (s) {
+    case UNO_SUCCESS:           return "SUCCESS";
+    case UNO_ITERATION_LIMIT:   return "ITERATION_LIMIT";
+    case UNO_TIME_LIMIT:        return "TIME_LIMIT";
+    case UNO_EVALUATION_ERROR:  return "EVALUATION_ERROR";
+    case UNO_ALGORITHMIC_ERROR: return "ALGORITHMIC_ERROR";
+    default:                    return "UNKNOWN";
+  }
+}
+static std::string solution_status_name(uno_int s) {
+  switch (s) {
+    case UNO_NOT_OPTIMAL:                  return "NOT_OPTIMAL";
+    case UNO_FEASIBLE_KKT_POINT:           return "FEASIBLE_KKT_POINT";
+    case UNO_FEASIBLE_FJ_POINT:            return "FEASIBLE_FJ_POINT";
+    case UNO_INFEASIBLE_STATIONARY_POINT:  return "INFEASIBLE_STATIONARY_POINT";
+    case UNO_FEASIBLE_SMALL_STEP:          return "FEASIBLE_SMALL_STEP";
+    case UNO_INFEASIBLE_SMALL_STEP:        return "INFEASIBLE_SMALL_STEP";
+    case UNO_UNBOUNDED:                    return "UNBOUNDED";
+    default:                               return "UNKNOWN";
+  }
+}
+
+// A status returned as a named integer (the idiomatic R form): the value is
+// Uno's enum code, the name is its canonical label, e.g. c(SUCCESS = 0L). The
+// caller gets both -- numeric comparison and a string key, via names().
+static cpp11::writable::integers named_status(uno_int code, const std::string& name) {
+  cpp11::writable::integers v(1);
+  v[0] = static_cast<int>(code);
+  v.names() = cpp11::writable::strings({name});
+  return v;
+}
+
 [[cpp11::register]]
 cpp11::list uno_solve_impl(int n, cpp11::doubles lb, cpp11::doubles ub, std::string sense,
                       SEXP obj, SEXP grad, int m, cpp11::doubles cl, cpp11::doubles cu,
                       SEXP cons, cpp11::integers jac_rows, cpp11::integers jac_cols,
                       SEXP jac, cpp11::integers hess_rows, cpp11::integers hess_cols,
                       SEXP hess, cpp11::doubles x0, std::string preset,
-                      int base_indexing, bool verbose, cpp11::list options) {
+                      int base_indexing, bool verbose, cpp11::list options,
+                      std::string lagrangian_sign, SEXP dual0,
+                      SEXP iter_callback, SEXP log_callback) {
   RCallbacks cb;
   cb.obj = obj;
   cb.grad = grad;
   cb.cons = cons;
   cb.jac = jac;
   cb.hess = hess;
+  cb.iter = iter_callback;  // C4
+  cb.log = log_callback;    // C5
 
   const uno_int optimization_sense =
       (sense == "maximize") ? UNO_MAXIMIZE : UNO_MINIMIZE;
@@ -266,10 +365,21 @@ cpp11::list uno_solve_impl(int n, cpp11::doubles lb, cpp11::doubles ub, std::str
     uno_set_lagrangian_hessian(model, static_cast<uno_int>(hrows.size()),
                                UNO_LOWER_TRIANGLE, hrows.data(), hcols.data(),
                                lagrangian_hessian_trampoline);
-    uno_set_lagrangian_sign_convention(model, UNO_MULTIPLIER_NEGATIVE);
+    // C1: caller-chosen Lagrangian sign convention. The diff-engine oracle
+    // (sparsediff) returns sigma*Hf + sum_i lambda_i*Hg_i = L = sigma*f + y^T c,
+    // i.e. UNO_MULTIPLIER_POSITIVE; CVXR passes "positive". Default "negative"
+    // matches Uno's own C-API default.
+    const uno_int sign_conv = (lagrangian_sign == "positive")
+        ? UNO_MULTIPLIER_POSITIVE : UNO_MULTIPLIER_NEGATIVE;
+    uno_set_lagrangian_sign_convention(model, sign_conv);
   }
 
   uno_set_initial_primal_iterate(model, REAL(x0));
+  // C3: optional warm-start dual iterate (length m + 2n bound duals per Uno's
+  // layout; the caller supplies the full vector). NULL -> Uno's default.
+  if (dual0 != R_NilValue) {
+    uno_set_initial_dual_iterate(model, REAL(dual0));
+  }
 
   // --- solver ------------------------------------------------------------
   void* solver = uno_create_solver();
@@ -281,7 +391,20 @@ cpp11::list uno_solve_impl(int n, cpp11::doubles lb, cpp11::doubles ub, std::str
   // user options override the preset and the defaults set just above
   apply_solver_options(solver, options);
 
+  // C4: per-iterate termination/progress callback (notify left null).
+  if (iter_callback != R_NilValue) {
+    uno_set_solver_callbacks(solver, nullptr, termination_trampoline, &cb);
+  }
+  // C5: route Uno's logger output to an R sink (global; reset after optimize).
+  if (log_callback != R_NilValue) {
+    uno_set_logger_stream_callback(logger_trampoline, &cb);
+  }
+
   uno_optimize(solver, model);
+
+  if (log_callback != R_NilValue) {
+    uno_reset_logger_stream();
+  }
 
   using namespace cpp11::literals;
   const uno_int opt_status = uno_get_optimization_status(solver);
@@ -304,8 +427,10 @@ cpp11::list uno_solve_impl(int n, cpp11::doubles lb, cpp11::doubles ub, std::str
   };
 
   cpp11::writable::list out({
-      "optimization_status"_nm = static_cast<int>(opt_status),
-      "solution_status"_nm = static_cast<int>(sol_status),
+      // C2: status as a named integer c(LABEL = code) -- carries both Uno's
+      // enum code and its canonical label (key a status map by names()).
+      "optimization_status"_nm = named_status(opt_status, optimization_status_name(opt_status)),
+      "solution_status"_nm = named_status(sol_status, solution_status_name(sol_status)),
       "objective"_nm = objective,
       "primal"_nm = to_dbls(primal),
       "constraint_dual"_nm = to_dbls(con_dual),
