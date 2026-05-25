@@ -27,7 +27,9 @@ uno_solve(
   verbose,
   options = list(),
   lagrangian_sign = c("negative", "positive"),
-  dual0 = NULL
+  dual0 = NULL,
+  iter_callback = NULL,
+  log_callback = NULL
 )
 }
 \arguments{
@@ -78,6 +80,17 @@ the Lagrangian Hessian's constraint terms get the wrong sign (invisible
 when all constraints are linear, since their Hessian is zero).}
 
 \item{dual0}{optional warm-start dual iterate, or `NULL` (Uno's default).}
+
+\item{iter_callback}{optional `function(info)` called at each acceptable
+iterate; return `TRUE` to terminate the solve early. `info` is a named list
+with `primals`, `lower_bound_dual`, `upper_bound_dual`, `constraint_dual`,
+`objective_multiplier`, and the `primal_feasibility`/`stationarity`/
+`complementarity` residuals. Errors in the callback are caught and treated
+as "do not terminate". `NULL` disables it.}
+
+\item{log_callback}{optional `function(text)` that receives Uno's output
+stream in chunks (a sink for the solver log); `NULL` leaves output on
+stdout. Independent of `verbose` (which controls how much Uno prints).}
 }
 \value{
 a named list with the optimization/solution status (canonical

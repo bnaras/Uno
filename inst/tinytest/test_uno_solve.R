@@ -149,3 +149,72 @@ expect_equal(capped_dbl$iterations, capped_int$iterations)
 ## an unknown option name and an unnamed options list both error cleanly
 expect_error(hs015_solve(list(not_a_real_option = 1)), "unknown solver option")
 expect_error(hs015_solve(list(1)), "named list")
+
+## @unopy NONE
+## C1: lagrangian_sign = "positive" (L = sigma*f + y^T c). HS015 has NONLINEAR
+## constraints, so the constraint-Hessian terms are nonzero and the sign matters
+## (this is exactly the case the old hardcoded "negative" broke for a positive-
+## convention oracle). The positive-convention Hessian flips the lambda terms;
+## with lagrangian_sign="positive" Uno must reach the same optimum as the
+## default-"negative" run above.
+hs015_hess_pos <- function(x, sigma, lambda)
+  c(sigma * (1200 * x[1]^2 - 400 * x[2] + 2),
+    -400 * sigma * x[1] + lambda[1],     # + (positive convention) vs - above
+    200 * sigma + 2 * lambda[2])
+res_pos <- uno_solve(
+  n = 2L, lb = c(-Inf, -Inf), ub = c(0.5, Inf), sense = "minimize",
+  obj = hs015_obj, grad = hs015_grad,
+  m = 2L, cl = c(1, 0), cu = c(Inf, Inf), cons = hs015_cons,
+  jac_rows = c(0L, 1L, 0L, 1L), jac_cols = c(0L, 0L, 1L, 1L), jac = hs015_jac,
+  hess_rows = c(0L, 1L, 1L), hess_cols = c(0L, 0L, 1L), hess = hs015_hess_pos,
+  x0 = c(-2, 1), preset = "ipopt", base_indexing = 0L, verbose = FALSE,
+  lagrangian_sign = "positive"
+)
+expect_equal(res_pos$optimization_status, "SUCCESS")
+expect_equal(res_pos$objective, 306.5, tolerance = 1e-4)
+expect_equal(res_pos$primal, c(0.5, 2.0), tolerance = 1e-4)
+
+## @unopy NONE
+## C4: iter_callback fires per acceptable iterate with iterate info; returning
+## FALSE runs to completion.
+cb_calls <- 0L
+cb_info  <- NULL
+res_cb <- uno_solve(
+  n = 2L, lb = c(-Inf, -Inf), ub = c(Inf, Inf), sense = "minimize",
+  obj = obj, grad = grad, m = 1L, cl = -Inf, cu = 10, cons = cons,
+  jac_rows = c(0L, 0L), jac_cols = c(0L, 1L), jac = jac,
+  hess_rows = c(0L, 1L), hess_cols = c(0L, 1L), hess = hess,
+  x0 = c(0, 0), preset = "filtersqp", base_indexing = 0L, verbose = FALSE,
+  iter_callback = function(info) { cb_calls <<- cb_calls + 1L; cb_info <<- info; FALSE }
+)
+expect_true(cb_calls >= 1L)
+expect_equal(res_cb$optimization_status, "SUCCESS")
+expect_true(all(c("primals", "constraint_dual", "stationarity") %in% names(cb_info)))
+expect_equal(length(cb_info$primals), 2L)
+
+## C4: returning TRUE terminates early; callback still fires, solve returns cleanly.
+term_calls <- 0L
+res_term <- uno_solve(
+  n = 2L, lb = c(-Inf, -Inf), ub = c(Inf, Inf), sense = "minimize",
+  obj = obj, grad = grad, m = 1L, cl = -Inf, cu = 10, cons = cons,
+  jac_rows = c(0L, 0L), jac_cols = c(0L, 1L), jac = jac,
+  hess_rows = c(0L, 1L), hess_cols = c(0L, 1L), hess = hess,
+  x0 = c(0, 0), preset = "filtersqp", base_indexing = 0L, verbose = FALSE,
+  iter_callback = function(info) { term_calls <<- term_calls + 1L; TRUE }
+)
+expect_true(term_calls >= 1L)
+expect_true(is.character(res_term$optimization_status))
+
+## @unopy NONE
+## C5: log_callback receives Uno's output stream (a sink for the solver log).
+log_chunks <- character(0)
+res_log <- uno_solve(
+  n = 2L, lb = c(-Inf, -Inf), ub = c(Inf, Inf), sense = "minimize",
+  obj = obj, grad = grad, m = 1L, cl = -Inf, cu = 10, cons = cons,
+  jac_rows = c(0L, 0L), jac_cols = c(0L, 1L), jac = jac,
+  hess_rows = c(0L, 1L), hess_cols = c(0L, 1L), hess = hess,
+  x0 = c(0, 0), preset = "filtersqp", base_indexing = 0L, verbose = TRUE,
+  log_callback = function(t) log_chunks[[length(log_chunks) + 1L]] <<- t
+)
+expect_true(length(log_chunks) >= 1L)
+expect_true(is.character(unlist(log_chunks)))
