@@ -1,7 +1,9 @@
 # Uno <img src="man/figures/logo.png" align="right" height="139" alt="Uno logo" />
 
 <!-- badges: start -->
-[![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
+[![CRAN status](https://www.r-pkg.org/badges/version/Uno)](https://CRAN.R-project.org/package=Uno)
+[![R-universe version](https://bnaras.r-universe.dev/Uno/badges/version)](https://bnaras.r-universe.dev/Uno)
+[![R-CMD-check](https://github.com/bnaras/Uno/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/bnaras/Uno/actions/workflows/R-CMD-check.yaml)
 <!-- badges: end -->
 
 R bindings to [Uno](https://github.com/cvanaret/Uno) (Unifying Nonlinear

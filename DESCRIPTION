@@ -11,12 +11,14 @@ Authors@R: c(
            comment = "Co-developed the Uno framework"),
     person("HiGHS development team", role = "cph",
            comment = "Bundled HiGHS LP/QP/MIP solver (MIT); see inst/COPYRIGHTS"))
-Description: R bindings to 'Uno' (Unifying Nonlinear Optimization), a C++ solver
-    for nonlinearly constrained optimization, via Uno's C API. The 'HiGHS' QP/LP
-    subproblem solver is built from source (for the SQP presets); the 'MUMPS'
-    linear solver used by the interior-point preset is reached at runtime through
-    the 'rmumps' package. Intended as a nonlinear (DNLP) backend for 'CVXR'; this
-    is the R analog of the 'unopy' Python package.
+Description: Bindings to 'Uno' (Unifying Nonlinear Optimization), a C++ solver
+    for smooth nonlinearly constrained optimization. Uno unifies Lagrange-Newton
+    methods -- including sequential quadratic programming and interior-point
+    methods -- by decomposing them into interacting building blocks
+    (constraint-relaxation, inequality-handling, Hessian, and globalization
+    strategies) that can be freely combined, either through options or through
+    presets that reproduce established solvers such as filterSQP and 'IPOPT'.
+    The framework is described in Vanaret (2024) <doi:10.48550/arXiv.2406.13454>.
 License: MIT + file LICENSE
 Copyright: file inst/COPYRIGHTS
 URL: https://bnaras.github.io/Uno/, https://github.com/bnaras/Uno
