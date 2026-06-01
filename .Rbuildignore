@@ -21,3 +21,4 @@
 ^src/uno/interfaces/Julia
 ^tools/shorten_paths\.R$
 ^tools/path_shortenings\.csv$
+^tools/build-logo\.R$
