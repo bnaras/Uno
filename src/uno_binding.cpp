@@ -33,6 +33,7 @@ struct RCallbacks {
   SEXP hess;  // function(x, sigma, lambda) -> double[nnz_hess] (lower-tri COO)
   SEXP iter;  // C4: function(info_list) -> logical (TRUE terminates); or NULL
   SEXP log;   // C5: function(text) -> NULL (logger stream sink); or NULL
+  uno_int iter_terminate;  // C4: TRUE-request from the last notify, relayed to termination
 };
 
 // Wrap a C buffer as a REALSXP the R closure can read. Caller PROTECTs.
@@ -122,16 +123,17 @@ uno_int lagrangian_hessian_trampoline(uno_int n, uno_int m, uno_int nnz,
   return rc;
 }
 
-// C4: termination callback. Passes the acceptable iterate (primals,
-// bound/constraint multipliers, objective multiplier, KKT residuals) to the R
-// `iter` closure as a named list; the closure returns TRUE to stop the solve.
-// An R error in the closure is caught (R_tryEval) and treated as "do not
-// terminate" -- progress callbacks must never longjmp through Uno's optimize().
-uno_int termination_trampoline(uno_int n, uno_int m, const double* primals,
-                               const double* lb_mult, const double* ub_mult,
-                               const double* con_mult, double obj_mult,
-                               double primal_feas, double stationarity,
-                               double complementarity, void* user_data) {
+// C4: build the acceptable-iterate info list (primals, bound/constraint
+// multipliers, objective multiplier, KKT residuals), pass it to the R `iter`
+// closure, and return its TRUE -> terminate request. Shared by the notify
+// (per-iterate) and termination (relay) trampolines below. An R error in the
+// closure is caught (R_tryEval) and treated as "do not terminate" -- progress
+// callbacks must never longjmp through Uno's optimize().
+uno_int invoke_iter_callback(uno_int n, uno_int m, const double* primals,
+                             const double* lb_mult, const double* ub_mult,
+                             const double* con_mult, double obj_mult,
+                             double primal_feas, double stationarity,
+                             double complementarity, void* user_data) {
   RCallbacks* cb = static_cast<RCallbacks*>(user_data);
   SEXP info = PROTECT(Rf_allocVector(VECSXP, 8));
   SEXP names = PROTECT(Rf_allocVector(STRSXP, 8));
@@ -162,6 +164,32 @@ uno_int termination_trampoline(uno_int n, uno_int m, const double* primals,
   }
   UNPROTECT(3);
   return terminate;
+}
+
+// C4 (Uno >= 2.7.3): the per-iterate progress callback. notify_acceptable_iterate
+// fires on every accepted iterate (unlike the termination callback, whose firing
+// 2.7.3 made conditional). It is void, so we stash the R closure's TRUE-terminate
+// request for the termination relay below.
+void notify_acceptable_iterate_trampoline(uno_int n, uno_int m, const double* primals,
+                                          const double* lb_mult, const double* ub_mult,
+                                          const double* con_mult, double obj_mult,
+                                          double primal_feas, double stationarity,
+                                          double complementarity, void* user_data) {
+  RCallbacks* cb = static_cast<RCallbacks*>(user_data);
+  cb->iter_terminate = invoke_iter_callback(n, m, primals, lb_mult, ub_mult, con_mult,
+                                            obj_mult, primal_feas, stationarity,
+                                            complementarity, user_data);
+}
+
+// C4: termination check. Relays the flag set by the most recent notify (no extra
+// R call), so iter_callback returning TRUE still stops the solve.
+uno_int termination_trampoline(uno_int /*n*/, uno_int /*m*/, const double* /*primals*/,
+                               const double* /*lb_mult*/, const double* /*ub_mult*/,
+                               const double* /*con_mult*/, double /*obj_mult*/,
+                               double /*primal_feas*/, double /*stationarity*/,
+                               double /*complementarity*/, void* user_data) {
+  RCallbacks* cb = static_cast<RCallbacks*>(user_data);
+  return cb->iter_terminate;
 }
 
 // C5: logger stream callback. Forwards each Uno output buffer to the R `log`
@@ -336,6 +364,7 @@ cpp11::list uno_solve_impl(int n, cpp11::doubles lb, cpp11::doubles ub, std::str
   cb.hess = hess;
   cb.iter = iter_callback;  // C4
   cb.log = log_callback;    // C5
+  cb.iter_terminate = 0;    // C4: no termination requested yet
 
   const uno_int optimization_sense =
       (sense == "maximize") ? UNO_MAXIMIZE : UNO_MINIMIZE;
@@ -391,9 +420,14 @@ cpp11::list uno_solve_impl(int n, cpp11::doubles lb, cpp11::doubles ub, std::str
   // user options override the preset and the defaults set just above
   apply_solver_options(solver, options);
 
-  // C4: per-iterate termination/progress callback (notify left null).
+  // C4: per-iterate progress + termination callback. Uno 2.7.3 split these:
+  // notify_acceptable_iterate fires reliably each accepted iterate (and carries
+  // the iterate data), while the termination callback decides whether to stop.
+  // Wire R's single `iter_callback` to both -- notify calls it and stashes the
+  // TRUE-terminate request, termination relays that request (no double call).
   if (iter_callback != R_NilValue) {
-    uno_set_solver_callbacks(solver, nullptr, termination_trampoline, &cb);
+    uno_set_solver_callbacks(solver, notify_acceptable_iterate_trampoline,
+                             termination_trampoline, &cb);
   }
   // C5: route Uno's logger output to an R sink (global; reset after optimize).
   if (log_callback != R_NilValue) {

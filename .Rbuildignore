@@ -18,3 +18,4 @@
 ^src/uno/CITATION\.cff$
 ^src/uno/interfaces/R$
 ^src/uno/interfaces/Python$
+^src/uno/interfaces/Julia

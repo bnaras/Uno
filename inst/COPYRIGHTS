@@ -1,0 +1,73 @@
+Uno R package -- copyright and licensing of bundled code
+========================================================
+
+The Uno R package itself -- the R code, src/uno_binding.cpp, and
+src/dmumps_shim.c -- is released under the MIT License (see the file LICENSE).
+
+For convenience the package builds and statically links the following
+third-party libraries from bundled source. Every bundled component is under a
+permissive, MIT-compatible license (MIT, BSD-3-Clause, Apache-2.0, zlib, or the
+Boost Software License 1.0); none is copyleft.
+
+
+1. Uno (C++ nonlinear optimization solver) -- src/uno/
+   Copyright (c) 2018-2025 Charlie Vanaret.
+   MIT License. Full text: src/uno/LICENSE
+
+
+2. HiGHS (LP / QP / MIP solver) -- src/HiGHS/
+   Copyright (c) HiGHS authors.
+   MIT License. Full text: src/HiGHS/LICENSE.txt
+
+   HiGHS in turn bundles, under src/HiGHS/extern/ and
+   src/HiGHS/highs/io/filereaderlp/:
+
+     AMD -- approximate minimum degree ordering
+       Copyright (c) 1996-2022 Timothy A. Davis, Patrick R. Amestoy,
+       and Iain S. Duff. BSD-3-Clause.
+       src/HiGHS/extern/amd/License.txt
+
+     METIS -- graph partitioning
+       Copyright 1995-2013 Regents of the University of Minnesota.
+       Apache License 2.0.
+       src/HiGHS/extern/metis/LICENSE.txt
+
+     pdqsort -- pattern-defeating quicksort
+       Copyright (c) 2021 Orson Peters. zlib License.
+       src/HiGHS/extern/pdqsort/license.txt
+
+     zstr -- C++ zlib stream wrapper
+       Copyright (c) 2015 Matei David, Ontario Institute for Cancer Research.
+       MIT License.
+       src/HiGHS/extern/zstr/LICENSE
+
+     rcm -- reverse Cuthill-McKee ordering
+       Copyright (c) 2005 Alan George, Joseph Liu, John Burkardt.
+       MIT License.
+       src/HiGHS/extern/rcm/LICENSE
+
+     filereaderlp -- LP-format file reader
+       Copyright (c) 2020 Michael Feldmeier. MIT License.
+       src/HiGHS/highs/io/filereaderlp/LICENSE
+
+     Catch2 -- C++ test framework (used by HiGHS's own tests; not linked
+       into the package library)
+       Boost Software License 1.0.
+       src/HiGHS/extern/LICENCE_1_0.txt
+
+     CLI11 -- command-line parser (used by the HiGHS standalone app only;
+       not linked into the package library)
+       BSD-3-Clause. Header: src/HiGHS/extern/CLI11.hpp
+
+
+Components NOT bundled
+----------------------
+
+MUMPS is NOT included in this package. The interior-point preset reaches the
+MUMPS 'dmumps_c' entry point at run time through the separately installed
+'rmumps' package (via R_FindSymbol; see src/dmumps_shim.c). 'rmumps' is licensed
+GPL (>= 2); no MUMPS source is distributed here, and the package compiles only
+against rmumps's C-API header. Builds without MUMPS (HiGHS-only) are supported.
+
+BQPD, an SQP subproblem solver that Uno can optionally use, is NOT bundled,
+owing to its restrictive license.
