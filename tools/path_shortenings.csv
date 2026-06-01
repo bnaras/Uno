@@ -1,0 +1,22 @@
+# Directory-segment renames that keep the bundled Uno source under the CRAN
+# 100-byte tarball-path limit. One row per segment: every directory named
+# <long_segment> under src/uno is renamed to <short_segment>, and path
+# references ("<long_segment>/") in C/C++/CMake files are rewritten.
+#
+# This is the single source of truth for the shortenings. Applied + verified by
+# tools/shorten_paths.R. Kept as CSV (not RDS) so it is diff-friendly and
+# hand-editable in review. The set of files that reference each segment is
+# DISCOVERED at apply time, never stored here, so it cannot drift behind upstream.
+#
+# When an upstream bump introduces a new over-limit path:
+#   Rscript tools/shorten_paths.R suggest   # proposes a segment to shorten
+#   # add the row here, then:
+#   Rscript tools/shorten_paths.R apply
+#   Rscript tools/shorten_paths.R check
+long_segment,short_segment
+constraint_relaxation_strategies,con_relax
+globalization_strategies,glob
+inequality_handling_methods,ineq
+inertia_correction_strategies,inertia
+quasi_newton,qn
+switching_methods,switching

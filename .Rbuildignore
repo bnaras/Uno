@@ -19,3 +19,5 @@
 ^src/uno/interfaces/R$
 ^src/uno/interfaces/Python$
 ^src/uno/interfaces/Julia
+^tools/shorten_paths\.R$
+^tools/path_shortenings\.csv$
