@@ -7,7 +7,7 @@
 #
 # Modeled on inst/build_highs.sh (highs R package) and inst/build_scip.sh
 # (scip R package). The Uno C++ source is vendored as a git submodule at
-# src/uno; HiGHS at src/HiGHS.
+# inst/uno; HiGHS at inst/HiGHS.
 #
 # Milestone A: builds uno_static WITHOUT any subproblem solver (no HiGHS),
 # enough to validate the packaging chain and the uno_version() smoke binding.
@@ -73,7 +73,7 @@ export CFLAGS="${CFLAGS} ${UNO_RIO_FLAGS}"
 export CXXFLAGS="${CXXFLAGS} ${UNO_RIO_FLAGS}"
 
 R_UNO_PKG_HOME=`pwd`
-UNO_SRC_DIR=${R_UNO_PKG_HOME}/src/uno              # Uno C++ source (git submodule)
+UNO_SRC_DIR=${R_UNO_PKG_HOME}/inst/uno             # Uno C++ source (git submodule)
 UNO_BUILD_DIR=${R_UNO_PKG_HOME}/uno_build
 UNO_INSTALL_DIR=${R_UNO_PKG_HOME}/src/unolib
 
@@ -89,7 +89,7 @@ echo ""
 
 if test ! -f "${UNO_SRC_DIR}/CMakeLists.txt"; then
     echo "Uno source not found at '${UNO_SRC_DIR}'."
-    echo "Initialize the submodule: git submodule update --init src/uno"
+    echo "Initialize the submodule: git submodule update --init inst/uno"
     exit 1
 fi
 

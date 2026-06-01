@@ -1,6 +1,6 @@
 # Directory-segment renames that keep the bundled Uno source under the CRAN
 # 100-byte tarball-path limit. One row per segment: every directory named
-# <long_segment> under src/uno is renamed to <short_segment>, and path
+# <long_segment> under inst/uno is renamed to <short_segment>, and path
 # references ("<long_segment>/") in C/C++/CMake files are rewritten.
 #
 # This is the single source of truth for the shortenings. Applied + verified by

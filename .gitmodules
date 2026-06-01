@@ -1,8 +1,8 @@
 [submodule "src/uno"]
-	path = src/uno
+	path = inst/uno
 	url = https://github.com/bnaras/Uno_source.git
 	branch = r-pkg
 [submodule "src/HiGHS"]
-	path = src/HiGHS
+	path = inst/HiGHS
 	url = https://github.com/bnaras/HiGHS.git
 	branch = r-pkg

@@ -4,7 +4,7 @@
 ##
 ## WHY: `R CMD check` flags any file whose tarball path ("Uno/<relpath>") exceeds
 ## 100 bytes (a tar/ustar portability limit). The vendored Uno C++ tree is deeply
-## nested (src/uno/uno/ingredients/...), so several files sit at/near the limit.
+## nested (inst/uno/uno/ingredients/...), so several files sit at/near the limit.
 ## Rather than carry hand-applied directory renames as source patches -- which
 ## conflict on every upstream rebase and reveal the *next* long path only after a
 ## slow build -- this script:
@@ -32,7 +32,7 @@
 
 LIMIT <- 100L
 PKG   <- "Uno"                                   # tarball top dir (= Package)
-ROOT  <- "src/uno"                               # vendored subtree
+ROOT  <- "inst/uno"                              # vendored subtree
 MAP   <- "tools/path_shortenings.csv"
 EXTS  <- c("cpp", "hpp", "h", "txt", "cmake", "in")  # ref-rewrite targets
 

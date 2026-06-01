@@ -48,7 +48,7 @@ export CXXFLAGS="${CXXFLAGS} ${CPPFLAGS}"
 export LDFLAGS=`"${R_HOME}/bin/R" CMD config LDFLAGS`
 
 R_UNO_PKG_HOME=`pwd`
-HIGHS_SRC_DIR=${R_UNO_PKG_HOME}/src/HiGHS
+HIGHS_SRC_DIR=${R_UNO_PKG_HOME}/inst/HiGHS
 HIGHS_BUILD_DIR=${R_UNO_PKG_HOME}/highs_build
 HIGHS_INSTALL_DIR=${R_UNO_PKG_HOME}/src/highslib
 
@@ -69,7 +69,7 @@ export CXXFLAGS="${CXXFLAGS} ${HIGHS_RIO_FLAGS}"
 
 if test ! -f "${HIGHS_SRC_DIR}/CMakeLists.txt"; then
     echo "HiGHS source not found at '${HIGHS_SRC_DIR}'."
-    echo "Initialize the submodule: git submodule update --init src/HiGHS"
+    echo "Initialize the submodule: git submodule update --init inst/HiGHS"
     exit 1
 fi
 

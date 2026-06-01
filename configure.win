@@ -41,20 +41,27 @@ cd "${R_UNO_PKG_HOME}"
 # Drop the bundled source trees on a tarball install (see ./configure for the
 # rationale and the submodule-safety guard).
 if test -d inst/doc; then
-    test -e src/HiGHS/.git || rm -rf src/HiGHS
-    test -e src/uno/.git   || rm -rf src/uno
+    test -e inst/HiGHS/.git || rm -rf inst/HiGHS
+    test -e inst/uno/.git   || rm -rf inst/uno
 fi
 
 # Remove the intermediate CMake build trees (their generated Makefiles carry
-# CRLF on Windows -> "line endings in Makefiles" WARNING) and normalize CRLF in
-# the installed HiGHS headers (Windows CMake emits CRLF -> "line endings in
-# sources" NOTE).
+# CRLF on Windows -> "line endings in Makefiles" WARNING).
 rm -rf highs_build uno_build
-if test -d src/highslib/include; then
-    find src/highslib/include -type f -print | while read f; do
-        tr -d '\r' < "$f" > "$f.tmp" && mv "$f.tmp" "$f"
+
+# Normalize the installed HiGHS/Uno headers: strip CRLF -> LF and ensure a
+# trailing newline, so R CMD check's "line endings in sources" and "not
+# terminated with a newline" NOTEs stay clear.  No-ops on already-clean files.
+for incdir in src/highslib/include src/unolib/include; do
+    test -d "${incdir}" || continue
+    find "${incdir}" -type f -print | while read f; do
+        tr -d '\r' < "$f" > "$f.tmp"
+        if test -s "$f.tmp" && test -n "$(tail -c1 "$f.tmp")"; then
+            printf '\n' >> "$f.tmp"
+        fi
+        mv "$f.tmp" "$f"
     done
-fi
+done
 
 R_UNO_LIB_DIR=${R_UNO_PKG_HOME}/src/unolib
 

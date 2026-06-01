@@ -10,54 +10,54 @@ permissive, MIT-compatible license (MIT, BSD-3-Clause, Apache-2.0, zlib, or the
 Boost Software License 1.0); none is copyleft.
 
 
-1. Uno (C++ nonlinear optimization solver) -- src/uno/
+1. Uno (C++ nonlinear optimization solver) -- inst/uno/
    Copyright (c) 2018-2025 Charlie Vanaret.
-   MIT License. Full text: src/uno/LICENSE
+   MIT License. Full text: inst/uno/LICENSE
 
 
-2. HiGHS (LP / QP / MIP solver) -- src/HiGHS/
+2. HiGHS (LP / QP / MIP solver) -- inst/HiGHS/
    Copyright (c) HiGHS authors.
-   MIT License. Full text: src/HiGHS/LICENSE.txt
+   MIT License. Full text: inst/HiGHS/LICENSE.txt
 
-   HiGHS in turn bundles, under src/HiGHS/extern/ and
-   src/HiGHS/highs/io/filereaderlp/:
+   HiGHS in turn bundles, under inst/HiGHS/extern/ and
+   inst/HiGHS/highs/io/filereaderlp/:
 
      AMD -- approximate minimum degree ordering
        Copyright (c) 1996-2022 Timothy A. Davis, Patrick R. Amestoy,
        and Iain S. Duff. BSD-3-Clause.
-       src/HiGHS/extern/amd/License.txt
+       inst/HiGHS/extern/amd/License.txt
 
      METIS -- graph partitioning
        Copyright 1995-2013 Regents of the University of Minnesota.
        Apache License 2.0.
-       src/HiGHS/extern/metis/LICENSE.txt
+       inst/HiGHS/extern/metis/LICENSE.txt
 
      pdqsort -- pattern-defeating quicksort
        Copyright (c) 2021 Orson Peters. zlib License.
-       src/HiGHS/extern/pdqsort/license.txt
+       inst/HiGHS/extern/pdqsort/license.txt
 
      zstr -- C++ zlib stream wrapper
        Copyright (c) 2015 Matei David, Ontario Institute for Cancer Research.
        MIT License.
-       src/HiGHS/extern/zstr/LICENSE
+       inst/HiGHS/extern/zstr/LICENSE
 
      rcm -- reverse Cuthill-McKee ordering
        Copyright (c) 2005 Alan George, Joseph Liu, John Burkardt.
        MIT License.
-       src/HiGHS/extern/rcm/LICENSE
+       inst/HiGHS/extern/rcm/LICENSE
 
      filereaderlp -- LP-format file reader
        Copyright (c) 2020 Michael Feldmeier. MIT License.
-       src/HiGHS/highs/io/filereaderlp/LICENSE
+       inst/HiGHS/highs/io/filereaderlp/LICENSE
 
      Catch2 -- C++ test framework (used by HiGHS's own tests; not linked
        into the package library)
        Boost Software License 1.0.
-       src/HiGHS/extern/LICENCE_1_0.txt
+       inst/HiGHS/extern/LICENCE_1_0.txt
 
      CLI11 -- command-line parser (used by the HiGHS standalone app only;
        not linked into the package library)
-       BSD-3-Clause. Header: src/HiGHS/extern/CLI11.hpp
+       BSD-3-Clause. Header: inst/HiGHS/extern/CLI11.hpp
 
 
 Components NOT bundled
