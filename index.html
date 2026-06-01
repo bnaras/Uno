@@ -11,8 +11,8 @@
 <script src="deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="R Interface to the Uno Nonlinear Optimization Solver">
-<meta name="description" content="R bindings to Uno (Unifying Nonlinear Optimization), a C++ solver for nonlinearly constrained optimization, via Unos C API. The HiGHS QP/LP subproblem solver is built from source (for the SQP presets); the MUMPS linear solver used by the interior-point preset is reached at runtime through the rmumps package. Intended as a nonlinear (DNLP) backend for CVXR; this is the R analog of the unopy' Python package.">
-<meta property="og:description" content="R bindings to Uno (Unifying Nonlinear Optimization), a C++ solver for nonlinearly constrained optimization, via Unos C API. The HiGHS QP/LP subproblem solver is built from source (for the SQP presets); the MUMPS linear solver used by the interior-point preset is reached at runtime through the rmumps package. Intended as a nonlinear (DNLP) backend for CVXR; this is the R analog of the unopy' Python package.">
+<meta name="description" content="Bindings to Uno (Unifying Nonlinear Optimization), a C++ solver for smooth nonlinearly constrained optimization. Uno unifies Lagrange-Newton methods -- including sequential quadratic programming and interior-point methods -- by decomposing them into interacting building blocks (constraint-relaxation, inequality-handling, Hessian, and globalization strategies) that can be freely combined, either through options or through presets that reproduce established solvers such as filterSQP and IPOPT. The framework is described in Vanaret (2024) &lt;doi:10.48550/arXiv.2406.13454&gt;.">
+<meta property="og:description" content="Bindings to Uno (Unifying Nonlinear Optimization), a C++ solver for smooth nonlinearly constrained optimization. Uno unifies Lagrange-Newton methods -- including sequential quadratic programming and interior-point methods -- by decomposing them into interacting building blocks (constraint-relaxation, inequality-handling, Hessian, and globalization strategies) that can be freely combined, either through options or through presets that reproduce established solvers such as filterSQP and IPOPT. The framework is described in Vanaret (2024) &lt;doi:10.48550/arXiv.2406.13454&gt;.">
 <meta property="og:image" content="https://bnaras.github.io/Uno/logo.png">
 </head>
 <body>
@@ -146,7 +146,9 @@
 <div class="dev-status">
 <h2 data-toc-skip>Dev status</h2>
 <ul class="list-unstyled">
-<li><a href="https://lifecycle.r-lib.org/articles/stages.html#experimental" class="external-link"><img src="https://img.shields.io/badge/lifecycle-experimental-orange.svg" alt="Lifecycle: experimental"></a></li>
+<li><a href="https://CRAN.R-project.org/package=Uno" class="external-link"><img src="https://www.r-pkg.org/badges/version/Uno" alt="CRAN status"></a></li>
+<li><a href="https://bnaras.r-universe.dev/Uno" class="external-link"><img src="https://bnaras.r-universe.dev/Uno/badges/version" alt="R-universe version"></a></li>
+<li><a href="https://github.com/bnaras/Uno/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/bnaras/Uno/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a></li>
 </ul>
 </div>
 
