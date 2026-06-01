@@ -1,0 +1,31 @@
+citHeader(
+  "To cite the Uno R package in publications, please cite both the package",
+  "and the paper describing the Uno solver:"
+)
+
+bibentry(
+  bibtype = "Manual",
+  title   = "{Uno}: R Interface to the Uno Nonlinear Optimization Solver",
+  author  = c(
+    person("Balasubramanian", "Narasimhan"),
+    person("Charlie", "Vanaret"),
+    person("Sven", "Leyffer")
+  ),
+  year    = "2026",
+  note    = sprintf("R package version %s", meta$Version),
+  url     = "https://github.com/bnaras/Uno"
+)
+
+bibentry(
+  bibtype = "Misc",
+  title   = "Implementing a unified solver for nonlinearly constrained optimization",
+  author  = c(
+    person("Charlie", "Vanaret"),
+    person("Sven", "Leyffer")
+  ),
+  year    = "2024",
+  doi     = "10.48550/arXiv.2406.13454",
+  eprint  = "2406.13454",
+  archivePrefix = "arXiv",
+  primaryClass  = "math.OC"
+)

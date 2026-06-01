@@ -68,6 +68,19 @@ res$primal      # 0.5 2
 Any Uno solver option can be passed through `options` as a named list (applied
 after the preset). See `vignette("Uno")` for the full walk-through.
 
+## Citation
+
+If you use this package, please cite both the R package and the paper
+describing the Uno solver. Run `citation("Uno")` for the up-to-date entries, or:
+
+> Narasimhan B, Vanaret C, Leyffer S (2026). *Uno: R Interface to the Uno
+> Nonlinear Optimization Solver*. R package.
+> <https://github.com/bnaras/Uno>.
+>
+> Vanaret C, Leyffer S (2024). *Implementing a unified solver for nonlinearly
+> constrained optimization.* arXiv:2406.13454.
+> <https://doi.org/10.48550/arXiv.2406.13454>.
+
 ## License
 
 MIT. Uno is by Charlie Vanaret and Sven Leyffer.

@@ -18,7 +18,8 @@ Description: Bindings to 'Uno' (Unifying Nonlinear Optimization), a C++ solver
     (constraint-relaxation, inequality-handling, Hessian, and globalization
     strategies) that can be freely combined, either through options or through
     presets that reproduce established solvers such as filterSQP and 'IPOPT'.
-    The framework is described in Vanaret (2024) <doi:10.48550/arXiv.2406.13454>.
+    The framework is described in Vanaret and Leyffer (2024)
+    <doi:10.48550/arXiv.2406.13454>.
 License: MIT + file LICENSE
 Copyright: file inst/COPYRIGHTS
 URL: https://bnaras.github.io/Uno/, https://github.com/bnaras/Uno
