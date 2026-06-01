@@ -11,8 +11,8 @@
 <script src="deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="R Interface to the Uno Nonlinear Optimization Solver">
-<meta name="description" content="Bindings to Uno (Unifying Nonlinear Optimization), a C++ solver for smooth nonlinearly constrained optimization. Uno unifies Lagrange-Newton methods -- including sequential quadratic programming and interior-point methods -- by decomposing them into interacting building blocks (constraint-relaxation, inequality-handling, Hessian, and globalization strategies) that can be freely combined, either through options or through presets that reproduce established solvers such as filterSQP and IPOPT. The framework is described in Vanaret (2024) &lt;doi:10.48550/arXiv.2406.13454&gt;.">
-<meta property="og:description" content="Bindings to Uno (Unifying Nonlinear Optimization), a C++ solver for smooth nonlinearly constrained optimization. Uno unifies Lagrange-Newton methods -- including sequential quadratic programming and interior-point methods -- by decomposing them into interacting building blocks (constraint-relaxation, inequality-handling, Hessian, and globalization strategies) that can be freely combined, either through options or through presets that reproduce established solvers such as filterSQP and IPOPT. The framework is described in Vanaret (2024) &lt;doi:10.48550/arXiv.2406.13454&gt;.">
+<meta name="description" content="Bindings to Uno (Unifying Nonlinear Optimization), a C++ solver for smooth nonlinearly constrained optimization. Uno unifies Lagrange-Newton methods -- including sequential quadratic programming and interior-point methods -- by decomposing them into interacting building blocks (constraint-relaxation, inequality-handling, Hessian, and globalization strategies) that can be freely combined, either through options or through presets that reproduce established solvers such as filterSQP and IPOPT. The framework is described in Vanaret and Leyffer (2024) &lt;doi:10.48550/arXiv.2406.13454&gt;.">
+<meta property="og:description" content="Bindings to Uno (Unifying Nonlinear Optimization), a C++ solver for smooth nonlinearly constrained optimization. Uno unifies Lagrange-Newton methods -- including sequential quadratic programming and interior-point methods -- by decomposing them into interacting building blocks (constraint-relaxation, inequality-handling, Hessian, and globalization strategies) that can be freely combined, either through options or through presets that reproduce established solvers such as filterSQP and IPOPT. The framework is described in Vanaret and Leyffer (2024) &lt;doi:10.48550/arXiv.2406.13454&gt;.">
 <meta property="og:image" content="https://bnaras.github.io/Uno/logo.png">
 </head>
 <body>
@@ -99,6 +99,15 @@
 <span><span class="va">res</span><span class="op">$</span><span class="va">objective</span>   <span class="co"># 306.5</span></span>
 <span><span class="va">res</span><span class="op">$</span><span class="va">primal</span>      <span class="co"># 0.5 2</span></span></code></pre></div>
 <p>Any Uno solver option can be passed through <code>options</code> as a named list (applied after the preset). See <code><a href="articles/Uno.html">vignette("Uno")</a></code> for the full walk-through.</p>
+</div>
+<div class="section level2">
+<h2 id="citation">Citation<a class="anchor" aria-label="anchor" href="#citation"></a>
+</h2>
+<p>If you use this package, please cite both the R package and the paper describing the Uno solver. Run <code>citation("Uno")</code> for the up-to-date entries, or:</p>
+<blockquote>
+<p>Narasimhan B, Vanaret C, Leyffer S (2026). <em>Uno: R Interface to the Uno Nonlinear Optimization Solver</em>. R package. <a href="https://github.com/bnaras/Uno" class="external-link uri">https://github.com/bnaras/Uno</a>.</p>
+<p>Vanaret C, Leyffer S (2024). <em>Implementing a unified solver for nonlinearly constrained optimization.</em> arXiv:2406.13454. <a href="https://doi.org/10.48550/arXiv.2406.13454" class="external-link uri">https://doi.org/10.48550/arXiv.2406.13454</a>.</p>
+</blockquote>
 </div>
 <div class="section level2">
 <h2 id="license">License<a class="anchor" aria-label="anchor" href="#license"></a>

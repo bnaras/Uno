@@ -121,7 +121,7 @@ res$iterations
 res$objective_evaluations
 #> [1] 22
 res$cpu_time
-#> [1] 0.020043
+#> [1] 0.020619
 ```
 
 ## Solver options
