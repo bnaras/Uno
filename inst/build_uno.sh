@@ -61,11 +61,14 @@ export LDFLAGS=`"${R_HOME}/bin/R" CMD config LDFLAGS`
 # uno/tools/r_io.h (#ifdef UNO_R_PRINT, pulled in via Logger.hpp and the few
 # files using std::cout) routes std::cout/std::cerr to R's console through a
 # streambuf over Rprintf/REprintf, so the std::cout symbol never appears in
-# libuno.a (needed for R CMD check "checking compiled code").  -I<R>/include
-# lets r_io.h find <R_ext/Print.h>/<R_ext/Error.h>.  Uno's C++ uses no C printf
-# or C `stdout` token, so no funopen/fopencookie FILE* redirect is needed and
-# the fix is identically clean on macOS, Linux and Windows.
-UNO_RIO_FLAGS="-DUNO_R_PRINT -I${R_HOME}/include"
+# libuno.a (needed for R CMD check "checking compiled code").  The R header
+# include path is queried from R itself: on Debian/Ubuntu and r-universe the
+# headers live in R_INCLUDE_DIR (e.g. /usr/share/R/include), NOT ${R_HOME}/include,
+# so a hardcoded -I${R_HOME}/include misses <R_ext/Print.h>/<R_ext/Error.h>.
+# Uno's C++ uses no C printf or C `stdout` token, so no funopen/fopencookie FILE*
+# redirect is needed and the fix is identically clean on macOS, Linux and Windows.
+R_HDR_FLAGS=`"${R_HOME}/bin/R" CMD config --cppflags`
+UNO_RIO_FLAGS="-DUNO_R_PRINT ${R_HDR_FLAGS}"
 export CFLAGS="${CFLAGS} ${UNO_RIO_FLAGS}"
 export CXXFLAGS="${CXXFLAGS} ${UNO_RIO_FLAGS}"
 

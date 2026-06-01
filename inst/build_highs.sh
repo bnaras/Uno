@@ -59,7 +59,11 @@ HIGHS_INSTALL_DIR=${R_UNO_PKG_HOME}/src/highslib
 # flags are used: -DHIGHS_R_PRINT to enable the hook and -I<R>/include so
 # r_io.h can find <R_ext/Print.h>.  Applied to BOTH C and C++ (the bundled
 # cupdlp_*.c files also emit printf symbols), which is why r_io.h is C-safe.
-HIGHS_RIO_FLAGS="-DHIGHS_R_PRINT -I${R_HOME}/include"
+# R header include path: query R itself (portable). On Debian/Ubuntu and
+# r-universe the R headers live in R_INCLUDE_DIR (e.g. /usr/share/R/include),
+# NOT ${R_HOME}/include, so a hardcoded -I${R_HOME}/include misses <R_ext/*.h>.
+R_HDR_FLAGS=`"${R_HOME}/bin/R" CMD config --cppflags`
+HIGHS_RIO_FLAGS="-DHIGHS_R_PRINT ${R_HDR_FLAGS}"
 export CFLAGS="${CFLAGS} ${HIGHS_RIO_FLAGS}"
 export CXXFLAGS="${CXXFLAGS} ${HIGHS_RIO_FLAGS}"
 
