@@ -11,5 +11,5 @@ A character scalar, e.g. `"2.7.2"`.
 
 ``` r
 uno_version()
-#> [1] "2.7.2"
+#> [1] "2.7.3"
 ```

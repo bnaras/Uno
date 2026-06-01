@@ -21,7 +21,7 @@ Two solver paths are available out of the box:
 
 library(Uno)
 uno_version()
-#> [1] "2.7.2"
+#> [1] "2.7.3"
 ```
 
 ## A worked example: HS015
@@ -121,7 +121,7 @@ res$iterations
 res$objective_evaluations
 #> [1] 22
 res$cpu_time
-#> [1] 0.022639
+#> [1] 0.02225
 ```
 
 ## Solver options
