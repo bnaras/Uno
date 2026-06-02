@@ -1,14 +1,14 @@
 # Uno
 
-R bindings to [Uno](https://github.com/cvanaret/Uno) (Unifying Nonlinear
-Optimization), a C++ solver for nonlinearly constrained optimization,
-via Uno’s C API. You describe a nonlinear program with R callbacks —
-objective, gradient, constraints, Jacobian and Lagrangian Hessian — and
-Uno solves it. This is the R analog of the `unopy` Python binding,
-intended as the nonlinear (DNLP) solver backend for
-[CVXR](https://github.com/cvxgrp/CVXR).
+We provide R bindings to [Uno](https://github.com/cvanaret/Uno)
+(Unifying Nonlinear Optimization), a C++ solver for nonlinearly
+constrained optimization, via Uno’s C API. The interface allows you to
+describe a nonlinear program with R callbacks for objective, gradient,
+constraints, Jacobian and Lagrangian Hessian and Uno solves it. This is
+the R analog of the `unopy` Python binding, intended as the nonlinear
+(DNLP) solver backend for [CVXR](https://github.com/cvxgrp/CVXR).
 
-Two solver paths ship out of the box:
+Two solver paths are provided:
 
 - the **`filtersqp`** SQP preset, whose QP subproblems are solved by
   **HiGHS** (built from source with the package), and
@@ -18,15 +18,18 @@ Two solver paths ship out of the box:
 
 ## Installation
 
+Install from CRAN as usual or from the repo via:
+
 ``` r
 
 # install.packages("remotes")
 remotes::install_github("bnaras/Uno")
 ```
 
-A C++17 compiler and CMake (\>= 3.16) are required: the package builds
-Uno and HiGHS from source. MUMPS comes from the `rmumps` dependency, so
-there is no separate MUMPS installation.
+A C++17 compiler and CMake (\>= 3.16) are required for source builds as
+the package builds the underlying Uno and HiGHS from source. MUMPS comes
+from the `rmumps` dependency, so there is no separate MUMPS
+installation.
 
 ## Quick example
 

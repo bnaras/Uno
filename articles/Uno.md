@@ -1,9 +1,9 @@
 # Solving nonlinear programs with Uno
 
-## What this package is
+## Introduction
 
 **Uno** wraps the [Uno](https://github.com/cvanaret/Uno) C++ solver
-(Unifying Nonlinear Optimization) through its C API. You describe a
+(Unifying Nonlinear Optimization) through its C API. One describes a
 nonlinear program with R callbacks — objective, gradient, constraints,
 constraint Jacobian, and Lagrangian Hessian — and Uno solves it. The
 package is the R analog of the `unopy` Python binding, and is intended
@@ -16,8 +16,7 @@ uno_version()
 #> [1] "2.7.3"
 ```
 
-Two solver paths ship out of the box, selected with the `preset`
-argument:
+Two solver paths are available, selected with the `preset` argument:
 
 - **`ipopt`** — an interior-point method whose symmetric-indefinite KKT
   systems are factored by **MUMPS**, reached at run time through the
@@ -28,10 +27,10 @@ argument:
   by **HiGHS** (built from source with this package). HiGHS solves
   *convex* QPs, so this preset is the right choice for convex problems.
 
-This vignette is mostly about the part that takes practice: how the
-**callbacks** and their **sparsity structures** fit together.
+We provide some examples to illustrate how the **callbacks** and their
+**sparsity structures** fit together.
 
-## The problem Uno solves
+## Problem Description
 
 Uno minimizes (or maximizes) a smooth objective subject to smooth
 constraints and bounds,
@@ -124,14 +123,14 @@ is controlled by `base_indexing`:
   throughout this vignette);
 - `base_indexing = 0L` — C-style **zero-based** indices.
 
-The base you declare must match the indices you actually put in
+The base declared must match the indices you actually provided in
 `jac_rows`/`jac_cols` (and `hess_rows`/`hess_cols`).
 
 ### The Lagrangian Hessian (lower triangle)
 
-Like most interior-point/SQP solvers, Uno does not want the Hessian of
-the objective — it wants the Hessian of the **Lagrangian**, supplied as
-the **lower triangle** in COO form (`hess_rows`/`hess_cols` with
+Like most interior-point/SQP solvers, Uno does not use the Hessian of
+the objective, rather the Hessian of the **Lagrangian**, supplied as the
+**lower triangle** in COO form (`hess_rows`/`hess_cols` with
 `row >= col`). The callback receives the objective scale `sigma`
 ($`\sigma`$) and the constraint multipliers `lambda`:
 
@@ -375,11 +374,12 @@ rosen_lm$primal
 
 ## Example 4: Maximum-entropy distribution — equality constraints
 
-A staple of statistics and information-theory courses: among all
-probability distributions $`p`$ on $`\{1, \dots, K\}`$ with a prescribed
-mean $`\mu`$, find the one of maximum entropy. Equivalently, minimize
-the negative entropy $`\sum_i p_i \log p_i`$ subject to
-$`\sum_i p_i = 1`$ and $`\sum_i i\,p_i = \mu`$, $`p_i \ge 0`$.
+This example is a staple of statistics and information-theory courses:
+among all probability distributions $`p`$ on $`\{1, \dots, K\}`$ with a
+prescribed mean $`\mu`$, find the one of maximum entropy. Equivalently,
+minimize the negative entropy $`\sum_i p_i \log p_i`$ subject to
+$`\sum_i
+p_i = 1`$ and $`\sum_i i\,p_i = \mu`$, $`p_i \ge 0`$.
 
 Both constraints are **linear**, so their Hessians vanish — the
 Lagrangian Hessian is just $`\sigma\,\mathrm{diag}(1/p_i)`$, a diagonal
@@ -559,12 +559,11 @@ names(stopped$optimization_status)   # "USER_TERMINATION"
 An error thrown inside the callback is caught and treated as “do not
 terminate,” so a buggy monitor cannot crash the solve.
 
-## Notes
+## Additional Notes
 
-- MUMPS is provided at run time by the `rmumps` package (a hard
-  dependency); no separate MUMPS installation is needed.
 - Errors thrown inside a callback are caught and reported back to Uno as
-  an evaluation error — they will not crash the R session.
+  an evaluation error — they will not crash the R session. If this
+  happens, please report the bug with a reproducible example.
 - [`uno_solve()`](https://bnaras.github.io/Uno/reference/uno_solve.md)
   also accepts a `log_callback` (a sink for Uno’s output stream); see
   [`?uno_solve`](https://bnaras.github.io/Uno/reference/uno_solve.md)

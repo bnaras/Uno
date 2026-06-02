@@ -55,8 +55,8 @@
 </div>
 <!-- badges: start -->
 
-<p>R bindings to <a href="https://github.com/cvanaret/Uno" class="external-link">Uno</a> (Unifying Nonlinear Optimization), a C++ solver for nonlinearly constrained optimization, via Uno’s C API. You describe a nonlinear program with R callbacks — objective, gradient, constraints, Jacobian and Lagrangian Hessian — and Uno solves it. This is the R analog of the <code>unopy</code> Python binding, intended as the nonlinear (DNLP) solver backend for <a href="https://github.com/cvxgrp/CVXR" class="external-link">CVXR</a>.</p>
-<p>Two solver paths ship out of the box:</p>
+<p>We provide R bindings to <a href="https://github.com/cvanaret/Uno" class="external-link">Uno</a> (Unifying Nonlinear Optimization), a C++ solver for nonlinearly constrained optimization, via Uno’s C API. The interface allows you to describe a nonlinear program with R callbacks for objective, gradient, constraints, Jacobian and Lagrangian Hessian and Uno solves it. This is the R analog of the <code>unopy</code> Python binding, intended as the nonlinear (DNLP) solver backend for <a href="https://github.com/cvxgrp/CVXR" class="external-link">CVXR</a>.</p>
+<p>Two solver paths are provided:</p>
 <ul>
 <li>the <strong><code>filtersqp</code></strong> SQP preset, whose QP subproblems are solved by <strong>HiGHS</strong> (built from source with the package), and</li>
 <li>the <strong><code>ipopt</code></strong> interior-point preset, whose KKT systems are solved by <strong>MUMPS</strong>, reached at run time through the <a href="https://cran.r-project.org/package=rmumps" class="external-link">rmumps</a> package.</li>
@@ -64,10 +64,11 @@
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
+<p>Install from CRAN as usual or from the repo via:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># install.packages("remotes")</span></span>
 <span><span class="fu">remotes</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"bnaras/Uno"</span><span class="op">)</span></span></code></pre></div>
-<p>A C++17 compiler and CMake (&gt;= 3.16) are required: the package builds Uno and HiGHS from source. MUMPS comes from the <code>rmumps</code> dependency, so there is no separate MUMPS installation.</p>
+<p>A C++17 compiler and CMake (&gt;= 3.16) are required for source builds as the package builds the underlying Uno and HiGHS from source. MUMPS comes from the <code>rmumps</code> dependency, so there is no separate MUMPS installation.</p>
 </div>
 <div class="section level2">
 <h2 id="quick-example">Quick example<a class="anchor" aria-label="anchor" href="#quick-example"></a>

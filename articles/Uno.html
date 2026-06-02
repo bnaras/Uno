@@ -60,10 +60,10 @@
     
     
 <div class="section level2">
-<h2 id="what-this-package-is">What this package is<a class="anchor" aria-label="anchor" href="#what-this-package-is"></a>
+<h2 id="introduction">Introduction<a class="anchor" aria-label="anchor" href="#introduction"></a>
 </h2>
 <p><strong>Uno</strong> wraps the <a href="https://github.com/cvanaret/Uno" class="external-link">Uno</a> C++ solver (Unifying
-Nonlinear Optimization) through its C API. You describe a nonlinear
+Nonlinear Optimization) through its C API. One describes a nonlinear
 program with R callbacks — objective, gradient, constraints, constraint
 Jacobian, and Lagrangian Hessian — and Uno solves it. The package is the
 R analog of the <code>unopy</code> Python binding, and is intended as
@@ -71,8 +71,8 @@ the nonlinear (DNLP) solver backend for <a href="https://cvxr.rbind.io" class="e
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/uno_version.html">uno_version</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] "2.7.3"</span></span></code></pre></div>
-<p>Two solver paths ship out of the box, selected with the
-<code>preset</code> argument:</p>
+<p>Two solver paths are available, selected with the <code>preset</code>
+argument:</p>
 <ul>
 <li>
 <strong><code>ipopt</code></strong> — an interior-point method whose
@@ -86,12 +86,12 @@ QP subproblems are solved by <strong>HiGHS</strong> (built from source
 with this package). HiGHS solves <em>convex</em> QPs, so this preset is
 the right choice for convex problems.</li>
 </ul>
-<p>This vignette is mostly about the part that takes practice: how the
+<p>We provide some examples to illustrate how the
 <strong>callbacks</strong> and their <strong>sparsity
 structures</strong> fit together.</p>
 </div>
 <div class="section level2">
-<h2 id="the-problem-uno-solves">The problem Uno solves<a class="anchor" aria-label="anchor" href="#the-problem-uno-solves"></a>
+<h2 id="problem-description">Problem Description<a class="anchor" aria-label="anchor" href="#problem-description"></a>
 </h2>
 <p>Uno minimizes (or maximizes) a smooth objective subject to smooth
 constraints and bounds,</p>
@@ -215,17 +215,16 @@ their base is controlled by <code>base_indexing</code>:</p>
 <code>base_indexing = 0L</code> — C-style
 <strong>zero-based</strong> indices.</li>
 </ul>
-<p>The base you declare must match the indices you actually put in
+<p>The base declared must match the indices you actually provided in
 <code>jac_rows</code>/<code>jac_cols</code> (and
 <code>hess_rows</code>/<code>hess_cols</code>).</p>
 </div>
 <div class="section level3">
 <h3 id="the-lagrangian-hessian-lower-triangle">The Lagrangian Hessian (lower triangle)<a class="anchor" aria-label="anchor" href="#the-lagrangian-hessian-lower-triangle"></a>
 </h3>
-<p>Like most interior-point/SQP solvers, Uno does not want the Hessian
-of the objective — it wants the Hessian of the
-<strong>Lagrangian</strong>, supplied as the <strong>lower
-triangle</strong> in COO form
+<p>Like most interior-point/SQP solvers, Uno does not use the Hessian of
+the objective, rather the Hessian of the <strong>Lagrangian</strong>,
+supplied as the <strong>lower triangle</strong> in COO form
 (<code>hess_rows</code>/<code>hess_cols</code> with
 <code>row &gt;= col</code>). The callback receives the objective scale
 <code>sigma</code>
@@ -463,8 +462,8 @@ L-BFGS approximation from gradients. This is only available with the
 <div class="section level2">
 <h2 id="example-4-maximum-entropy-distribution-equality-constraints">Example 4: Maximum-entropy distribution — equality constraints<a class="anchor" aria-label="anchor" href="#example-4-maximum-entropy-distribution-equality-constraints"></a>
 </h2>
-<p>A staple of statistics and information-theory courses: among all
-probability distributions
+<p>This example is a staple of statistics and information-theory
+courses: among all probability distributions
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>p</mi><annotation encoding="application/x-tex">p</annotation></semantics></math>
 on
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">{</mo><mn>1</mn><mo>,</mo><mi>…</mi><mo>,</mo><mi>K</mi><mo stretchy="false" form="postfix">}</mo></mrow><annotation encoding="application/x-tex">\{1, \dots, K\}</annotation></semantics></math>
@@ -474,8 +473,8 @@ find the one of maximum entropy. Equivalently, minimize the negative
 entropy
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mo>∑</mo><mi>i</mi></msub><msub><mi>p</mi><mi>i</mi></msub><mrow><mi mathvariant="normal">log</mi><mo>⁡</mo></mrow><msub><mi>p</mi><mi>i</mi></msub></mrow><annotation encoding="application/x-tex">\sum_i p_i \log p_i</annotation></semantics></math>
 subject to
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mo>∑</mo><mi>i</mi></msub><msub><mi>p</mi><mi>i</mi></msub><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\sum_i p_i = 1</annotation></semantics></math>
-and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mo>∑</mo><mi>i</mi></msub><msub><mi>p</mi><mi>i</mi></msub><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\sum_i
+p_i = 1</annotation></semantics></math> and
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mo>∑</mo><mi>i</mi></msub><mi>i</mi><mspace width="0.167em"></mspace><msub><mi>p</mi><mi>i</mi></msub><mo>=</mo><mi>μ</mi></mrow><annotation encoding="application/x-tex">\sum_i i\,p_i = \mu</annotation></semantics></math>,
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>p</mi><mi>i</mi></msub><mo>≥</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">p_i \ge 0</annotation></semantics></math>.</p>
 <p>Both constraints are <strong>linear</strong>, so their Hessians
@@ -653,13 +652,12 @@ rather than writing a local copy:</p>
 terminate,” so a buggy monitor cannot crash the solve.</p>
 </div>
 <div class="section level2">
-<h2 id="notes">Notes<a class="anchor" aria-label="anchor" href="#notes"></a>
+<h2 id="additional-notes">Additional Notes<a class="anchor" aria-label="anchor" href="#additional-notes"></a>
 </h2>
 <ul>
-<li>MUMPS is provided at run time by the <code>rmumps</code> package (a
-hard dependency); no separate MUMPS installation is needed.</li>
 <li>Errors thrown inside a callback are caught and reported back to Uno
-as an evaluation error — they will not crash the R session.</li>
+as an evaluation error — they will not crash the R session. If this
+happens, please report the bug with a reproducible example.</li>
 <li>
 <code><a href="../reference/uno_solve.html">uno_solve()</a></code> also accepts a <code>log_callback</code> (a
 sink for Uno’s output stream); see <code><a href="../reference/uno_solve.html">?uno_solve</a></code> for the full
