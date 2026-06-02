@@ -64,149 +64,528 @@
 </h2>
 <p><strong>Uno</strong> wraps the <a href="https://github.com/cvanaret/Uno" class="external-link">Uno</a> C++ solver (Unifying
 Nonlinear Optimization) through its C API. You describe a nonlinear
-program with R callbacks — objective, gradient, constraints, Jacobian
-and Lagrangian Hessian — and Uno solves it. The package is the R analog
-of the <code>unopy</code> Python binding, and is intended as the
-nonlinear (DNLP) solver backend for <strong>CVXR</strong>.</p>
-<p>Two solver paths are available out of the box:</p>
-<ul>
-<li>the <strong><code>filtersqp</code></strong> SQP preset, whose QP
-subproblems are solved by <strong>HiGHS</strong> (built from source with
-the package); and</li>
-<li>the <strong><code>ipopt</code></strong> interior-point preset, whose
-symmetric-indefinite KKT systems are solved by <strong>MUMPS</strong>,
-reached at run time through the <a href="https://cran.r-project.org/package=rmumps" class="external-link">rmumps</a>
-package.</li>
-</ul>
+program with R callbacks — objective, gradient, constraints, constraint
+Jacobian, and Lagrangian Hessian — and Uno solves it. The package is the
+R analog of the <code>unopy</code> Python binding, and is intended as
+the nonlinear (DNLP) solver backend for <a href="https://cvxr.rbind.io" class="external-link">CVXR</a>.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://bnaras.github.io/Uno/">Uno</a></span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/uno_version.html">uno_version</a></span><span class="op">(</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/uno_version.html">uno_version</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] "2.7.3"</span></span></code></pre></div>
+<p>Two solver paths ship out of the box, selected with the
+<code>preset</code> argument:</p>
+<ul>
+<li>
+<strong><code>ipopt</code></strong> — an interior-point method whose
+symmetric-indefinite KKT systems are factored by <strong>MUMPS</strong>,
+reached at run time through the <a href="https://cran.r-project.org/package=rmumps" class="external-link">rmumps</a> package. It
+handles indefiniteness (nonconvex problems) through inertia
+correction.</li>
+<li>
+<strong><code>filtersqp</code></strong> — a filter SQP method whose
+QP subproblems are solved by <strong>HiGHS</strong> (built from source
+with this package). HiGHS solves <em>convex</em> QPs, so this preset is
+the right choice for convex problems.</li>
+</ul>
+<p>This vignette is mostly about the part that takes practice: how the
+<strong>callbacks</strong> and their <strong>sparsity
+structures</strong> fit together.</p>
 </div>
 <div class="section level2">
-<h2 id="a-worked-example-hs015">A worked example: HS015<a class="anchor" aria-label="anchor" href="#a-worked-example-hs015"></a>
+<h2 id="the-problem-uno-solves">The problem Uno solves<a class="anchor" aria-label="anchor" href="#the-problem-uno-solves"></a>
 </h2>
-<p>We solve Hock–Schittkowski problem 15, the canonical test used by
-Uno’s own example:
-<math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><munder><mi mathvariant="normal">min</mi><mi>x</mi></munder><mspace width="0.278em"></mspace><mn>100</mn><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><msub><mi>x</mi><mn>2</mn></msub><mo>−</mo><msubsup><mi>x</mi><mn>1</mn><mn>2</mn></msubsup><msup><mo stretchy="false" form="postfix">)</mo><mn>2</mn></msup><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mn>1</mn><mo>−</mo><msub><mi>x</mi><mn>1</mn></msub><msup><mo stretchy="false" form="postfix">)</mo><mn>2</mn></msup><mspace width="1.0em"></mspace><mtext mathvariant="normal">s.t.</mtext><mspace width="1.0em"></mspace><msub><mi>x</mi><mn>1</mn></msub><msub><mi>x</mi><mn>2</mn></msub><mo>≥</mo><mn>1</mn><mo>,</mo><mspace width="0.278em"></mspace><msub><mi>x</mi><mn>1</mn></msub><mo>+</mo><msubsup><mi>x</mi><mn>2</mn><mn>2</mn></msubsup><mo>≥</mo><mn>0</mn><mo>,</mo><mspace width="0.278em"></mspace><msub><mi>x</mi><mn>1</mn></msub><mo>≤</mo><mn>0.5</mn><mi>.</mi></mrow><annotation encoding="application/x-tex">
-\min_{x}\; 100\,(x_2 - x_1^2)^2 + (1 - x_1)^2
-\quad\text{s.t.}\quad x_1 x_2 \ge 1,\; x_1 + x_2^2 \ge 0,\; x_1 \le 0.5 .
-</annotation></semantics></math> Its solution is
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>x</mi><mo>⋆</mo></msup><mo>=</mo><mo stretchy="false" form="prefix">(</mo><mn>0.5</mn><mo>,</mo><mspace width="0.167em"></mspace><mn>2</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">x^\star = (0.5,\,2)</annotation></semantics></math>
-with objective
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>306.5</mn><annotation encoding="application/x-tex">306.5</annotation></semantics></math>.</p>
-<div class="section level3">
-<h3 id="defining-the-callbacks">Defining the callbacks<a class="anchor" aria-label="anchor" href="#defining-the-callbacks"></a>
-</h3>
-<p>The Jacobian and Hessian are supplied in <strong>COO (coordinate)
-form</strong>: you give the sparsity pattern as row/column index vectors
-once, and a callback that returns the nonzero <em>values</em> at a
-point. Indices here are 0-based (<code>base_indexing = 0L</code>). The
-Hessian is the <strong>lower triangle</strong> of the Lagrangian
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>σ</mi><mspace width="0.167em"></mspace><msup><mi>∇</mi><mn>2</mn></msup><mi>f</mi><mo>+</mo><msub><mo>∑</mo><mi>i</mi></msub><msub><mi>λ</mi><mi>i</mi></msub><msup><mi>∇</mi><mn>2</mn></msup><msub><mi>c</mi><mi>i</mi></msub></mrow><annotation encoding="application/x-tex">\sigma\,\nabla^2 f + \sum_i \lambda_i \nabla^2 c_i</annotation></semantics></math>.</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">objective</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fl">100</span> <span class="op">*</span> <span class="op">(</span><span class="va">x</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span> <span class="op">-</span> <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span><span class="op">^</span><span class="fl">2</span> <span class="op">+</span> <span class="op">(</span><span class="fl">1</span> <span class="op">-</span> <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">)</span><span class="op">^</span><span class="fl">2</span></span>
-<span><span class="va">gradient</span>  <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">400</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">^</span><span class="fl">3</span> <span class="op">-</span> <span class="fl">400</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span> <span class="op">+</span> <span class="fl">2</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">-</span> <span class="fl">2</span>,</span>
-<span>                           <span class="fl">200</span> <span class="op">*</span> <span class="op">(</span><span class="va">x</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span> <span class="op">-</span> <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">constraints</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span>, <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">+</span> <span class="va">x</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Jacobian nonzeros at (rows, cols) = {(0,0),(1,0),(0,1),(1,1)} (0-based)</span></span>
-<span><span class="va">jacobian</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">x</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span>, <span class="fl">1</span>, <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span>, <span class="fl">2</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># lower-triangular Lagrangian Hessian nonzeros at {(0,0),(1,0),(1,1)}</span></span>
-<span><span class="va">hessian</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span>, <span class="va">sigma</span>, <span class="va">lambda</span><span class="op">)</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">sigma</span> <span class="op">*</span> <span class="op">(</span><span class="fl">1200</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">^</span><span class="fl">2</span> <span class="op">-</span> <span class="fl">400</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span> <span class="op">+</span> <span class="fl">2</span><span class="op">)</span>,</span>
-<span>    <span class="op">-</span><span class="fl">400</span> <span class="op">*</span> <span class="va">sigma</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">-</span> <span class="va">lambda</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span>,</span>
-<span>    <span class="fl">200</span> <span class="op">*</span> <span class="va">sigma</span> <span class="op">-</span> <span class="fl">2</span> <span class="op">*</span> <span class="va">lambda</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span><span class="op">)</span></span></code></pre></div>
-<p>By default Uno uses the <strong>negative</strong> Lagrangian
-convention,
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi><mo>=</mo><mi>σ</mi><mi>f</mi><mo>−</mo><msup><mi>y</mi><mi>⊤</mi></msup><mi>c</mi></mrow><annotation encoding="application/x-tex">L = \sigma f - y^\top c</annotation></semantics></math>
-– which is why the Hessian above <em>subtracts</em> the
-<code>lambda</code> terms. If your Hessian instead returns
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>σ</mi><msup><mi>∇</mi><mn>2</mn></msup><mi>f</mi><mo>+</mo><msub><mo>∑</mo><mi>i</mi></msub><msub><mi>λ</mi><mi>i</mi></msub><msup><mi>∇</mi><mn>2</mn></msup><msub><mi>g</mi><mi>i</mi></msub></mrow><annotation encoding="application/x-tex">\sigma\nabla^2 f + \sum_i \lambda_i \nabla^2 g_i</annotation></semantics></math>
-(the convention used by IPOPT and by CVXR’s <code>sparsediff</code>
-oracle), pass <code>lagrangian_sign = "positive"</code> so the
-constraint-Hessian terms get the right sign. With only <em>linear</em>
-constraints the constraint Hessian is zero and the choice does not
-matter.</p>
+<p>Uno minimizes (or maximizes) a smooth objective subject to smooth
+constraints and bounds,</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtable><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"><munder><mi mathvariant="normal">min</mi><mrow><mi>x</mi><mo>∈</mo><msup><mi>ℝ</mi><mi>n</mi></msup></mrow></munder><mspace width="1.0em"></mspace></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo stretchy="false" form="postfix">)</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"><mtext mathvariant="normal">subject to</mtext><mspace width="1.0em"></mspace></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><msup><mi>c</mi><mi mathvariant="normal">L</mi></msup><mo>≤</mo><mi>c</mi><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mo>≤</mo><msup><mi>c</mi><mi mathvariant="normal">U</mi></msup><mo>,</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><msup><mi>x</mi><mi mathvariant="normal">L</mi></msup><mo>≤</mo><mi>x</mi><mo>≤</mo><msup><mi>x</mi><mi mathvariant="normal">U</mi></msup><mo>,</mo></mtd></mtr></mtable><annotation encoding="application/x-tex">
+\begin{aligned}
+\min_{x \in \mathbb{R}^n} \quad &amp; f(x) \\
+\text{subject to} \quad &amp; c^{\mathrm{L}} \le c(x) \le c^{\mathrm{U}}, \\
+                        &amp; x^{\mathrm{L}} \le x \le x^{\mathrm{U}},
+\end{aligned}
+</annotation></semantics></math></p>
+<p>where bounds may be infinite. As with most NLP solvers, the
+<em>type</em> of each constraint is encoded entirely in its bounds: an
+equality sets the lower and upper bound equal, and a one-sided
+inequality leaves the open side infinite.</p>
 </div>
+<div class="section level2">
+<h2 id="anatomy-of-uno_solve">Anatomy of <code>uno_solve()</code><a class="anchor" aria-label="anchor" href="#anatomy-of-uno_solve"></a>
+</h2>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/uno_solve.html">uno_solve</a></span><span class="op">(</span></span>
+<span>  <span class="va">n</span>, <span class="va">lb</span>, <span class="va">ub</span>, <span class="va">sense</span>,                 <span class="co"># variables, bounds, minimize/maximize</span></span>
+<span>  <span class="va">obj</span>, <span class="va">grad</span>,                        <span class="co"># objective f and its gradient</span></span>
+<span>  <span class="va">m</span>, <span class="va">cl</span>, <span class="va">cu</span>, <span class="va">cons</span>,                  <span class="co"># constraints c and their bounds</span></span>
+<span>  <span class="va">jac_rows</span>, <span class="va">jac_cols</span>, <span class="va">jac</span>,          <span class="co"># constraint Jacobian (COO form)</span></span>
+<span>  <span class="va">hess_rows</span>, <span class="va">hess_cols</span>, <span class="va">hess</span>,       <span class="co"># Lagrangian Hessian (lower triangle, COO)</span></span>
+<span>  <span class="va">x0</span>, <span class="va">preset</span>, <span class="va">base_indexing</span>, <span class="va">verbose</span>,</span>
+<span>  options <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,                 <span class="co"># Uno options, applied after the preset</span></span>
+<span>  lagrangian_sign <span class="op">=</span> <span class="st">"negative"</span>,     <span class="co"># sign convention of the Hessian you return</span></span>
+<span>  <span class="va">...</span></span>
+<span><span class="op">)</span></span></code></pre></div>
 <div class="section level3">
-<h3 id="solving-with-the-interior-point-preset">Solving with the interior-point preset<a class="anchor" aria-label="anchor" href="#solving-with-the-interior-point-preset"></a>
+<h3 id="variables-bounds-and-sense">Variables, bounds, and sense<a class="anchor" aria-label="anchor" href="#variables-bounds-and-sense"></a>
 </h3>
-<p>The <code>ipopt</code> preset uses MUMPS as its linear solver. We
-pass <code>options = list(logger = "SILENT")</code> to keep Uno quiet
-(see <em>Solver options</em> below).</p>
+<p><code>n</code> is the number of variables;
+<code>lb</code>/<code>ub</code> are length-<code>n</code> bound vectors
+(use <code>-Inf</code>/<code>Inf</code> for free, and
+<code>lb[i] == ub[i]</code> to fix a variable). <code>sense</code> is
+<code>"minimize"</code> or <code>"maximize"</code>.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">res</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/uno_solve.html">uno_solve</a></span><span class="op">(</span></span>
-<span>  n <span class="op">=</span> <span class="fl">2L</span>, lb <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="cn">Inf</span>, <span class="op">-</span><span class="cn">Inf</span><span class="op">)</span>, ub <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.5</span>, <span class="cn">Inf</span><span class="op">)</span>, sense <span class="op">=</span> <span class="st">"minimize"</span>,</span>
-<span>  obj <span class="op">=</span> <span class="va">objective</span>, grad <span class="op">=</span> <span class="va">gradient</span>,</span>
-<span>  m <span class="op">=</span> <span class="fl">2L</span>, cl <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">0</span><span class="op">)</span>, cu <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="cn">Inf</span>, <span class="cn">Inf</span><span class="op">)</span>, cons <span class="op">=</span> <span class="va">constraints</span>,</span>
-<span>  jac_rows <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0L</span>, <span class="fl">1L</span>, <span class="fl">0L</span>, <span class="fl">1L</span><span class="op">)</span>, jac_cols <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0L</span>, <span class="fl">0L</span>, <span class="fl">1L</span>, <span class="fl">1L</span><span class="op">)</span>, jac <span class="op">=</span> <span class="va">jacobian</span>,</span>
-<span>  hess_rows <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0L</span>, <span class="fl">1L</span>, <span class="fl">1L</span><span class="op">)</span>, hess_cols <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0L</span>, <span class="fl">0L</span>, <span class="fl">1L</span><span class="op">)</span>, hess <span class="op">=</span> <span class="va">hessian</span>,</span>
-<span>  x0 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">2</span>, <span class="fl">1</span><span class="op">)</span>, preset <span class="op">=</span> <span class="st">"ipopt"</span>, base_indexing <span class="op">=</span> <span class="fl">0L</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<code class="sourceCode R"><span><span class="co"># maximize -(x - 3)^2 on [0, 10]  -&gt;  x = 3</span></span>
+<span><span class="va">mx</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/uno_solve.html">uno_solve</a></span><span class="op">(</span></span>
+<span>  n <span class="op">=</span> <span class="fl">1L</span>, lb <span class="op">=</span> <span class="fl">0</span>, ub <span class="op">=</span> <span class="fl">10</span>, sense <span class="op">=</span> <span class="st">"maximize"</span>,</span>
+<span>  obj  <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="op">-</span><span class="op">(</span><span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">-</span> <span class="fl">3</span><span class="op">)</span><span class="op">^</span><span class="fl">2</span>,</span>
+<span>  grad <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="op">-</span><span class="fl">2</span> <span class="op">*</span> <span class="op">(</span><span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">-</span> <span class="fl">3</span><span class="op">)</span>,</span>
+<span>  m <span class="op">=</span> <span class="fl">0L</span>, cl <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">numeric</a></span><span class="op">(</span><span class="op">)</span>, cu <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">numeric</a></span><span class="op">(</span><span class="op">)</span>, cons <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">numeric</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  jac_rows <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">integer</a></span><span class="op">(</span><span class="op">)</span>, jac_cols <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">integer</a></span><span class="op">(</span><span class="op">)</span>, jac <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">numeric</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  hess_rows <span class="op">=</span> <span class="fl">1L</span>, hess_cols <span class="op">=</span> <span class="fl">1L</span>, hess <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span>, <span class="va">sigma</span>, <span class="va">lambda</span><span class="op">)</span> <span class="va">sigma</span> <span class="op">*</span> <span class="op">(</span><span class="op">-</span><span class="fl">2</span><span class="op">)</span>,</span>
+<span>  x0 <span class="op">=</span> <span class="fl">0</span>, preset <span class="op">=</span> <span class="st">"ipopt"</span>, base_indexing <span class="op">=</span> <span class="fl">1L</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  options <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>logger <span class="op">=</span> <span class="st">"SILENT"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">res</span><span class="op">$</span><span class="va">optimization_status</span>   <span class="co"># named integer: c(SUCCESS = 0L)</span></span>
-<span><span class="co">#&gt; SUCCESS </span></span>
-<span><span class="co">#&gt;       0</span></span>
-<span><span class="va">res</span><span class="op">$</span><span class="va">objective</span>             <span class="co"># 306.5</span></span>
-<span><span class="co">#&gt; [1] 306.5</span></span>
-<span><span class="va">res</span><span class="op">$</span><span class="va">primal</span>                <span class="co"># (0.5, 2)</span></span>
-<span><span class="co">#&gt; [1] 0.5 2.0</span></span></code></pre></div>
-<p><code>optimization_status</code> (and <code>solution_status</code>)
-are returned as <strong>named integers</strong> – the value is Uno’s
-enum code and the name its canonical label. Use <code><a href="https://rdrr.io/r/base/names.html" class="external-link">names()</a></code> for
-the label and <code>[[1]]</code> for the bare code (recall
-<code>x[1]</code> keeps the name, <code>x[[1]]</code> drops it):</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">res</span><span class="op">$</span><span class="va">optimization_status</span><span class="op">)</span>   <span class="co"># "SUCCESS"</span></span>
-<span><span class="co">#&gt; [1] "SUCCESS"</span></span>
-<span><span class="va">res</span><span class="op">$</span><span class="va">optimization_status</span><span class="op">[[</span><span class="fl">1L</span><span class="op">]</span><span class="op">]</span>    <span class="co"># 0L</span></span>
-<span><span class="co">#&gt; [1] 0</span></span></code></pre></div>
-<p>The result also carries the dual solution and a set of diagnostic
-counters:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">res</span><span class="op">$</span><span class="va">constraint_dual</span></span>
-<span><span class="co">#&gt; [1] 7.000000e+02 5.568458e-10</span></span>
-<span><span class="va">res</span><span class="op">$</span><span class="va">iterations</span></span>
-<span><span class="co">#&gt; [1] 18</span></span>
-<span><span class="va">res</span><span class="op">$</span><span class="va">objective_evaluations</span></span>
-<span><span class="co">#&gt; [1] 22</span></span>
-<span><span class="va">res</span><span class="op">$</span><span class="va">cpu_time</span></span>
-<span><span class="co">#&gt; [1] 0.022817</span></span></code></pre></div>
+<span><span class="va">mx</span><span class="op">$</span><span class="va">primal</span></span>
+<span><span class="co">#&gt; [1] 3</span></span></code></pre></div>
 </div>
+<div class="section level3">
+<h3 id="objective-and-gradient">Objective and gradient<a class="anchor" aria-label="anchor" href="#objective-and-gradient"></a>
+</h3>
+<p><code>obj(x)</code> returns the scalar
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">f(x)</annotation></semantics></math>;
+<code>grad(x)</code> returns the <strong>dense</strong>
+length-<code>n</code> gradient
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>∇</mi><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\nabla f(x)</annotation></semantics></math>
+(all <code>n</code> partials in variable order, including zeros).</p>
+</div>
+<div class="section level3">
+<h3 id="constraints-and-their-bounds">Constraints and their bounds<a class="anchor" aria-label="anchor" href="#constraints-and-their-bounds"></a>
+</h3>
+<p><code>m</code> is the number of constraints (<code>0</code> for an
+unconstrained problem, in which case the constraint and Jacobian
+callbacks return empty vectors). <code>cons(x)</code> returns the
+length-<code>m</code> vector
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>c</mi><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">c(x)</annotation></semantics></math>,
+and <code>cl</code>/<code>cu</code> are its bounds:</p>
+<table class="table">
+<thead><tr class="header">
+<th>Constraint</th>
+<th align="center"><code>cl</code></th>
+<th align="center"><code>cu</code></th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>c</mi><mi>j</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>b</mi></mrow><annotation encoding="application/x-tex">c_j(x) = b</annotation></semantics></math></td>
+<td align="center"><code>b</code></td>
+<td align="center"><code>b</code></td>
+</tr>
+<tr class="even">
+<td><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>c</mi><mi>j</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mo>≥</mo><mi>a</mi></mrow><annotation encoding="application/x-tex">c_j(x) \ge a</annotation></semantics></math></td>
+<td align="center"><code>a</code></td>
+<td align="center"><code>Inf</code></td>
+</tr>
+<tr class="odd">
+<td><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>c</mi><mi>j</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mo>≤</mo><mi>d</mi></mrow><annotation encoding="application/x-tex">c_j(x) \le d</annotation></semantics></math></td>
+<td align="center"><code>-Inf</code></td>
+<td align="center"><code>d</code></td>
+</tr>
+<tr class="even">
+<td><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>≤</mo><msub><mi>c</mi><mi>j</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mo>≤</mo><mi>d</mi></mrow><annotation encoding="application/x-tex">a \le c_j(x) \le d</annotation></semantics></math></td>
+<td align="center"><code>a</code></td>
+<td align="center"><code>d</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section level3">
+<h3 id="the-constraint-jacobian-coo-form">The constraint Jacobian (COO form)<a class="anchor" aria-label="anchor" href="#the-constraint-jacobian-coo-form"></a>
+</h3>
+<p>The Jacobian
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>J</mi><mrow><mi>j</mi><mi>k</mi></mrow></msub><mo>=</mo><mi>∂</mi><msub><mi>c</mi><mi>j</mi></msub><mi>/</mi><mi>∂</mi><msub><mi>x</mi><mi>k</mi></msub></mrow><annotation encoding="application/x-tex">J_{jk} = \partial c_j/\partial x_k</annotation></semantics></math>
+is supplied in <strong>coordinate (COO) form</strong>: you declare its
+sparsity pattern <em>once</em> as parallel
+<code>jac_rows</code>/<code>jac_cols</code> index vectors, and
+<code>jac(x)</code> returns just the nonzero <em>values</em> in that
+same order.</p>
+<p>The index vectors must be <strong>integer</strong> (<code>1L</code>,
+<code>2L</code>, …, or wrapped with <code><a href="https://rdrr.io/r/base/integer.html" class="external-link">as.integer()</a></code>), and
+their base is controlled by <code>base_indexing</code>:</p>
+<ul>
+<li>
+<code>base_indexing = 1L</code> — Fortran/R-style
+<strong>one-based</strong> indices (used throughout this vignette);</li>
+<li>
+<code>base_indexing = 0L</code> — C-style
+<strong>zero-based</strong> indices.</li>
+</ul>
+<p>The base you declare must match the indices you actually put in
+<code>jac_rows</code>/<code>jac_cols</code> (and
+<code>hess_rows</code>/<code>hess_cols</code>).</p>
+</div>
+<div class="section level3">
+<h3 id="the-lagrangian-hessian-lower-triangle">The Lagrangian Hessian (lower triangle)<a class="anchor" aria-label="anchor" href="#the-lagrangian-hessian-lower-triangle"></a>
+</h3>
+<p>Like most interior-point/SQP solvers, Uno does not want the Hessian
+of the objective — it wants the Hessian of the
+<strong>Lagrangian</strong>, supplied as the <strong>lower
+triangle</strong> in COO form
+(<code>hess_rows</code>/<code>hess_cols</code> with
+<code>row &gt;= col</code>). The callback receives the objective scale
+<code>sigma</code>
+(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>σ</mi><annotation encoding="application/x-tex">\sigma</annotation></semantics></math>)
+and the constraint multipliers <code>lambda</code>:</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">hess</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span>, <span class="va">sigma</span>, <span class="va">lambda</span><span class="op">)</span> <span class="va">...</span>   <span class="co"># lower-triangular nonzero values</span></span></code></pre></div>
+<p>The one subtlety unique to Uno is the <strong>sign
+convention</strong>. By default Uno uses</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mi>∇</mi><mrow><mi>x</mi><mi>x</mi></mrow><mn>2</mn></msubsup><mi>L</mi><mo>=</mo><mi>σ</mi><mspace width="0.167em"></mspace><msup><mi>∇</mi><mn>2</mn></msup><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>−</mo><mspace width="0.278em"></mspace><munder><mo>∑</mo><mi>j</mi></munder><msub><mi>λ</mi><mi>j</mi></msub><mspace width="0.167em"></mspace><msup><mi>∇</mi><mn>2</mn></msup><msub><mi>c</mi><mi>j</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mspace width="2.0em"></mspace><mo stretchy="false" form="prefix">(</mo><mtext mathvariant="monospace">𝚕𝚊𝚐𝚛𝚊𝚗𝚐𝚒𝚊𝚗_𝚜𝚒𝚐𝚗 = "𝚗𝚎𝚐𝚊𝚝𝚒𝚟𝚎"</mtext><mo stretchy="false" form="postfix">)</mo><mo>,</mo></mrow><annotation encoding="application/x-tex">
+\nabla^2_{xx} L = \sigma\, \nabla^2 f(x) \;-\; \sum_j \lambda_j\, \nabla^2 c_j(x)
+\qquad (\texttt{lagrangian\_sign = "negative"}),
+</annotation></semantics></math></p>
+<p>so the constraint-Hessian terms are <strong>subtracted</strong>. If
+your derivations instead produce the IPOPT/<code>sparsediff</code>
+convention</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mi>∇</mi><mrow><mi>x</mi><mi>x</mi></mrow><mn>2</mn></msubsup><mi>L</mi><mo>=</mo><mi>σ</mi><mspace width="0.167em"></mspace><msup><mi>∇</mi><mn>2</mn></msup><mi>f</mi><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>+</mo><mspace width="0.278em"></mspace><munder><mo>∑</mo><mi>j</mi></munder><msub><mi>λ</mi><mi>j</mi></msub><mspace width="0.167em"></mspace><msup><mi>∇</mi><mn>2</mn></msup><msub><mi>c</mi><mi>j</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>x</mi><mo stretchy="false" form="postfix">)</mo><mspace width="2.0em"></mspace><mo stretchy="false" form="prefix">(</mo><mtext mathvariant="monospace">𝚕𝚊𝚐𝚛𝚊𝚗𝚐𝚒𝚊𝚗_𝚜𝚒𝚐𝚗 = "𝚙𝚘𝚜𝚒𝚝𝚒𝚟𝚎"</mtext><mo stretchy="false" form="postfix">)</mo><mo>,</mo></mrow><annotation encoding="application/x-tex">
+\nabla^2_{xx} L = \sigma\, \nabla^2 f(x) \;+\; \sum_j \lambda_j\, \nabla^2 c_j(x)
+\qquad (\texttt{lagrangian\_sign = "positive"}),
+</annotation></semantics></math></p>
+<p>pass <code>lagrangian_sign = "positive"</code> so the terms get the
+right sign. <strong>The convention you pass must match the convention
+your <code>hess</code> returns.</strong> When all constraints are
+<em>linear</em> their Hessians vanish and the choice is irrelevant.</p>
+</div>
+<div class="section level3">
+<h3 id="options-and-the-return-value">Options and the return value<a class="anchor" aria-label="anchor" href="#options-and-the-return-value"></a>
+</h3>
+<p><code>options</code> is a named list of Uno options applied
+<em>after</em> the preset (so they override it); each value is coerced
+to the option’s declared type, and an unknown name or unacceptable value
+raises an error. We use <code>list(logger = "SILENT")</code> below to
+keep Uno quiet.</p>
+<p><code><a href="../reference/uno_solve.html">uno_solve()</a></code> returns a named list. The
+<code>optimization_status</code> and <code>solution_status</code> are
+<strong>named integers</strong> of the form <code>c(SUCCESS = 0L)</code>
+— the value is Uno’s enum code and the name its canonical label — so you
+can key a status map on <code>names(status)</code> and still read the
+bare code with <code>status[[1L]]</code>. The list also carries
+<code>objective</code>, <code>primal</code>, the dual solution
+(<code>constraint_dual</code>, <code>lower_bound_dual</code>,
+<code>upper_bound_dual</code>), KKT residuals, and per-callback
+evaluation counters.</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">quiet</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>logger <span class="op">=</span> <span class="st">"SILENT"</span><span class="op">)</span></span></code></pre></div>
+</div>
+</div>
+<div class="section level2">
+<h2 id="example-1-hs071-the-full-machinery">Example 1: HS071 — the full machinery<a class="anchor" aria-label="anchor" href="#example-1-hs071-the-full-machinery"></a>
+</h2>
+<p>The Hock–Schittkowski problem #71 exercises everything at once: a
+nonlinear objective, one nonlinear inequality, one nonlinear equality,
+and bounds.</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtable><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"><munder><mi mathvariant="normal">min</mi><mrow><mi>x</mi><mo>∈</mo><msup><mi>ℝ</mi><mn>4</mn></msup></mrow></munder><mspace width="1.0em"></mspace></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><msub><mi>x</mi><mn>1</mn></msub><msub><mi>x</mi><mn>4</mn></msub><mo stretchy="false" form="prefix">(</mo><msub><mi>x</mi><mn>1</mn></msub><mo>+</mo><msub><mi>x</mi><mn>2</mn></msub><mo>+</mo><msub><mi>x</mi><mn>3</mn></msub><mo stretchy="false" form="postfix">)</mo><mo>+</mo><msub><mi>x</mi><mn>3</mn></msub></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"><mtext mathvariant="normal">s.t.</mtext><mspace width="1.0em"></mspace></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><msub><mi>x</mi><mn>1</mn></msub><msub><mi>x</mi><mn>2</mn></msub><msub><mi>x</mi><mn>3</mn></msub><msub><mi>x</mi><mn>4</mn></msub><mo>≥</mo><mn>25</mn><mo>,</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><msubsup><mi>x</mi><mn>1</mn><mn>2</mn></msubsup><mo>+</mo><msubsup><mi>x</mi><mn>2</mn><mn>2</mn></msubsup><mo>+</mo><msubsup><mi>x</mi><mn>3</mn><mn>2</mn></msubsup><mo>+</mo><msubsup><mi>x</mi><mn>4</mn><mn>2</mn></msubsup><mo>=</mo><mn>40</mn><mo>,</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right; padding-right: 0"></mtd><mtd columnalign="left" style="text-align: left; padding-left: 0"><mn>1</mn><mo>≤</mo><msub><mi>x</mi><mi>i</mi></msub><mo>≤</mo><mn>5</mn><mi>.</mi></mtd></mtr></mtable><annotation encoding="application/x-tex">
+\begin{aligned}
+\min_{x \in \mathbb{R}^4} \quad &amp; x_1 x_4 (x_1 + x_2 + x_3) + x_3 \\
+\text{s.t.}\quad &amp; x_1 x_2 x_3 x_4 \ge 25, \\
+                 &amp; x_1^2 + x_2^2 + x_3^2 + x_4^2 = 40, \\
+                 &amp; 1 \le x_i \le 5.
+\end{aligned}
+</annotation></semantics></math></p>
+<p>Both constraints depend on every variable, so the Jacobian is dense
+(8 nonzeros). The Lagrangian Hessian is a full symmetric
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4</mn><mo>×</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">4\times4</annotation></semantics></math>
+matrix; its lower triangle has 10 nonzeros. We write the Hessian in the
+<strong>positive</strong> convention (matching, e.g., the
+<code>ipopt</code> package’s vignette).</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">hs071</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/uno_solve.html">uno_solve</a></span><span class="op">(</span></span>
+<span>  n <span class="op">=</span> <span class="fl">4L</span>, lb <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">4</span><span class="op">)</span>, ub <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">5</span>, <span class="fl">4</span><span class="op">)</span>, sense <span class="op">=</span> <span class="st">"minimize"</span>,</span>
+<span></span>
+<span>  obj  <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">4</span><span class="op">]</span> <span class="op">*</span> <span class="op">(</span><span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">+</span> <span class="va">x</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span> <span class="op">+</span> <span class="va">x</span><span class="op">[</span><span class="fl">3</span><span class="op">]</span><span class="op">)</span> <span class="op">+</span> <span class="va">x</span><span class="op">[</span><span class="fl">3</span><span class="op">]</span>,</span>
+<span>  grad <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    <span class="va">x</span><span class="op">[</span><span class="fl">4</span><span class="op">]</span> <span class="op">*</span> <span class="op">(</span><span class="fl">2</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">+</span> <span class="va">x</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span> <span class="op">+</span> <span class="va">x</span><span class="op">[</span><span class="fl">3</span><span class="op">]</span><span class="op">)</span>,</span>
+<span>    <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">4</span><span class="op">]</span>,</span>
+<span>    <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">4</span><span class="op">]</span> <span class="op">+</span> <span class="fl">1</span>,</span>
+<span>    <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">*</span> <span class="op">(</span><span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">+</span> <span class="va">x</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span> <span class="op">+</span> <span class="va">x</span><span class="op">[</span><span class="fl">3</span><span class="op">]</span><span class="op">)</span></span>
+<span>  <span class="op">)</span>,</span>
+<span></span>
+<span>  m <span class="op">=</span> <span class="fl">2L</span>, cl <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">25</span>, <span class="fl">40</span><span class="op">)</span>, cu <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="cn">Inf</span>, <span class="fl">40</span><span class="op">)</span>,   <span class="co"># g1 &gt;= 25 ; g2 == 40</span></span>
+<span>  cons <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/prod.html" class="external-link">prod</a></span><span class="op">(</span><span class="va">x</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">x</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span><span class="op">)</span>,</span>
+<span></span>
+<span>  <span class="co"># dense 2 x 4 Jacobian, one-based COO</span></span>
+<span>  jac_rows <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">2</span>, each <span class="op">=</span> <span class="fl">4L</span><span class="op">)</span>,</span>
+<span>  jac_cols <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">4</span>, times <span class="op">=</span> <span class="fl">2L</span><span class="op">)</span>,</span>
+<span>  jac <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    <span class="va">x</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">3</span><span class="op">]</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">4</span><span class="op">]</span>, <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">3</span><span class="op">]</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">4</span><span class="op">]</span>, <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">4</span><span class="op">]</span>, <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">3</span><span class="op">]</span>,</span>
+<span>    <span class="fl">2</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span>, <span class="fl">2</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span>, <span class="fl">2</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">3</span><span class="op">]</span>, <span class="fl">2</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">4</span><span class="op">]</span></span>
+<span>  <span class="op">)</span>,</span>
+<span></span>
+<span>  <span class="co"># lower triangle of the 4 x 4 Lagrangian Hessian, row by row</span></span>
+<span>  hess_rows <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">as.integer</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">2</span>, <span class="fl">2</span>, <span class="fl">3</span>, <span class="fl">3</span>, <span class="fl">3</span>, <span class="fl">4</span>, <span class="fl">4</span>, <span class="fl">4</span>, <span class="fl">4</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  hess_cols <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">as.integer</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">1</span>, <span class="fl">2</span>, <span class="fl">1</span>, <span class="fl">2</span>, <span class="fl">3</span>, <span class="fl">1</span>, <span class="fl">2</span>, <span class="fl">3</span>, <span class="fl">4</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  hess <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span>, <span class="va">sigma</span>, <span class="va">lambda</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="va">l1</span> <span class="op">&lt;-</span> <span class="va">lambda</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span>; <span class="va">l2</span> <span class="op">&lt;-</span> <span class="va">lambda</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>      <span class="va">sigma</span> <span class="op">*</span> <span class="op">(</span><span class="fl">2</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">4</span><span class="op">]</span><span class="op">)</span>                  <span class="op">+</span> <span class="va">l2</span> <span class="op">*</span> <span class="fl">2</span>,        <span class="co"># (1,1)</span></span>
+<span>      <span class="va">sigma</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">4</span><span class="op">]</span>            <span class="op">+</span> <span class="va">l1</span> <span class="op">*</span> <span class="op">(</span><span class="va">x</span><span class="op">[</span><span class="fl">3</span><span class="op">]</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">4</span><span class="op">]</span><span class="op">)</span>,        <span class="co"># (2,1)</span></span>
+<span>      <span class="va">l2</span> <span class="op">*</span> <span class="fl">2</span>,                                             <span class="co"># (2,2)</span></span>
+<span>      <span class="va">sigma</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">4</span><span class="op">]</span>            <span class="op">+</span> <span class="va">l1</span> <span class="op">*</span> <span class="op">(</span><span class="va">x</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">4</span><span class="op">]</span><span class="op">)</span>,        <span class="co"># (3,1)</span></span>
+<span>      <span class="va">l1</span> <span class="op">*</span> <span class="op">(</span><span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">4</span><span class="op">]</span><span class="op">)</span>,                                 <span class="co"># (3,2)</span></span>
+<span>      <span class="va">l2</span> <span class="op">*</span> <span class="fl">2</span>,                                             <span class="co"># (3,3)</span></span>
+<span>      <span class="va">sigma</span> <span class="op">*</span> <span class="op">(</span><span class="fl">2</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">+</span> <span class="va">x</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span> <span class="op">+</span> <span class="va">x</span><span class="op">[</span><span class="fl">3</span><span class="op">]</span><span class="op">)</span> <span class="op">+</span> <span class="va">l1</span> <span class="op">*</span> <span class="op">(</span><span class="va">x</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">3</span><span class="op">]</span><span class="op">)</span>,  <span class="co"># (4,1)</span></span>
+<span>      <span class="va">sigma</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span>            <span class="op">+</span> <span class="va">l1</span> <span class="op">*</span> <span class="op">(</span><span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">3</span><span class="op">]</span><span class="op">)</span>,        <span class="co"># (4,2)</span></span>
+<span>      <span class="va">sigma</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span>            <span class="op">+</span> <span class="va">l1</span> <span class="op">*</span> <span class="op">(</span><span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span><span class="op">)</span>,        <span class="co"># (4,3)</span></span>
+<span>      <span class="va">l2</span> <span class="op">*</span> <span class="fl">2</span>                                              <span class="co"># (4,4)</span></span>
+<span>    <span class="op">)</span></span>
+<span>  <span class="op">}</span>,</span>
+<span></span>
+<span>  x0 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">5</span>, <span class="fl">5</span>, <span class="fl">1</span><span class="op">)</span>, preset <span class="op">=</span> <span class="st">"ipopt"</span>, base_indexing <span class="op">=</span> <span class="fl">1L</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  options <span class="op">=</span> <span class="va">quiet</span>, lagrangian_sign <span class="op">=</span> <span class="st">"positive"</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">hs071</span><span class="op">$</span><span class="va">optimization_status</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] "SUCCESS"</span></span>
+<span><span class="va">hs071</span><span class="op">$</span><span class="va">objective</span>                    <span class="co"># 17.014</span></span>
+<span><span class="co">#&gt; [1] 17.01402</span></span>
+<span><span class="va">hs071</span><span class="op">$</span><span class="va">primal</span>                       <span class="co"># (1, 4.743, 3.821, 1.379)</span></span>
+<span><span class="co">#&gt; [1] 1.000000 4.743000 3.821150 1.379408</span></span>
+<span><span class="va">hs071</span><span class="op">$</span><span class="va">constraint_dual</span></span>
+<span><span class="co">#&gt; [1] -0.5522937  0.1614686</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="example-2-hs015-nonconvex-the-default-negative-convention">Example 2: HS015 — nonconvex, the default (negative) convention<a class="anchor" aria-label="anchor" href="#example-2-hs015-nonconvex-the-default-negative-convention"></a>
+</h2>
+<p>HS015 is nonconvex, which makes it a good illustration of two things:
+the <strong>default</strong> Lagrangian sign convention, and <em>why
+nonconvex problems need the interior-point preset</em>.</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><munder><mi mathvariant="normal">min</mi><mi>x</mi></munder><mspace width="0.278em"></mspace><mn>100</mn><mspace width="0.167em"></mspace><mo stretchy="false" form="prefix">(</mo><msub><mi>x</mi><mn>2</mn></msub><mo>−</mo><msubsup><mi>x</mi><mn>1</mn><mn>2</mn></msubsup><msup><mo stretchy="false" form="postfix">)</mo><mn>2</mn></msup><mo>+</mo><mo stretchy="false" form="prefix">(</mo><mn>1</mn><mo>−</mo><msub><mi>x</mi><mn>1</mn></msub><msup><mo stretchy="false" form="postfix">)</mo><mn>2</mn></msup><mspace width="1.0em"></mspace><mtext mathvariant="normal">s.t.</mtext><mspace width="1.0em"></mspace><msub><mi>x</mi><mn>1</mn></msub><msub><mi>x</mi><mn>2</mn></msub><mo>≥</mo><mn>1</mn><mo>,</mo><mspace width="0.278em"></mspace><msub><mi>x</mi><mn>1</mn></msub><mo>+</mo><msubsup><mi>x</mi><mn>2</mn><mn>2</mn></msubsup><mo>≥</mo><mn>0</mn><mo>,</mo><mspace width="0.278em"></mspace><msub><mi>x</mi><mn>1</mn></msub><mo>≤</mo><mn>0.5</mn><mi>.</mi></mrow><annotation encoding="application/x-tex">
+\min_{x}\; 100\,(x_2 - x_1^2)^2 + (1 - x_1)^2
+\quad\text{s.t.}\quad x_1 x_2 \ge 1,\; x_1 + x_2^2 \ge 0,\; x_1 \le 0.5 .
+</annotation></semantics></math></p>
+<p>The constraints are nonlinear, so here the sign convention matters.
+We leave <code>lagrangian_sign</code> at its default
+<code>"negative"</code> and therefore <strong>subtract</strong> the
+<code>lambda</code> terms in the Hessian.</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">hs015</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/uno_solve.html">uno_solve</a></span><span class="op">(</span></span>
+<span>  n <span class="op">=</span> <span class="fl">2L</span>, lb <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="cn">Inf</span>, <span class="op">-</span><span class="cn">Inf</span><span class="op">)</span>, ub <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.5</span>, <span class="cn">Inf</span><span class="op">)</span>, sense <span class="op">=</span> <span class="st">"minimize"</span>,</span>
+<span></span>
+<span>  obj  <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fl">100</span> <span class="op">*</span> <span class="op">(</span><span class="va">x</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span> <span class="op">-</span> <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span><span class="op">^</span><span class="fl">2</span> <span class="op">+</span> <span class="op">(</span><span class="fl">1</span> <span class="op">-</span> <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">)</span><span class="op">^</span><span class="fl">2</span>,</span>
+<span>  grad <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    <span class="fl">400</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">^</span><span class="fl">3</span> <span class="op">-</span> <span class="fl">400</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span> <span class="op">+</span> <span class="fl">2</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">-</span> <span class="fl">2</span>,</span>
+<span>    <span class="fl">200</span> <span class="op">*</span> <span class="op">(</span><span class="va">x</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span> <span class="op">-</span> <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span></span>
+<span>  <span class="op">)</span>,</span>
+<span></span>
+<span>  m <span class="op">=</span> <span class="fl">2L</span>, cl <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">0</span><span class="op">)</span>, cu <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="cn">Inf</span>, <span class="cn">Inf</span><span class="op">)</span>,</span>
+<span>  cons <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span>, <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">+</span> <span class="va">x</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span>,</span>
+<span></span>
+<span>  jac_rows <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">as.integer</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">2</span>, <span class="fl">1</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  jac_cols <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">as.integer</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">1</span>, <span class="fl">2</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  jac <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">x</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span>, <span class="fl">1</span>, <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span>, <span class="fl">2</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span><span class="op">)</span>,</span>
+<span></span>
+<span>  hess_rows <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">as.integer</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">2</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  hess_cols <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">as.integer</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">1</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  hess <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span>, <span class="va">sigma</span>, <span class="va">lambda</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    <span class="va">sigma</span> <span class="op">*</span> <span class="op">(</span><span class="fl">1200</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">^</span><span class="fl">2</span> <span class="op">-</span> <span class="fl">400</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span> <span class="op">+</span> <span class="fl">2</span><span class="op">)</span>,   <span class="co"># (1,1): from the objective</span></span>
+<span>    <span class="op">-</span><span class="fl">400</span> <span class="op">*</span> <span class="va">sigma</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">-</span> <span class="va">lambda</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span>,            <span class="co"># (2,1): note the minus signs</span></span>
+<span>    <span class="fl">200</span> <span class="op">*</span> <span class="va">sigma</span> <span class="op">-</span> <span class="fl">2</span> <span class="op">*</span> <span class="va">lambda</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span>                 <span class="co"># (2,2)</span></span>
+<span>  <span class="op">)</span>,</span>
+<span></span>
+<span>  x0 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">2</span>, <span class="fl">1</span><span class="op">)</span>, preset <span class="op">=</span> <span class="st">"ipopt"</span>, base_indexing <span class="op">=</span> <span class="fl">1L</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  options <span class="op">=</span> <span class="va">quiet</span>                                <span class="co"># lagrangian_sign = "negative" (default)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">hs015</span><span class="op">$</span><span class="va">optimization_status</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] "SUCCESS"</span></span>
+<span><span class="va">hs015</span><span class="op">$</span><span class="va">objective</span>                    <span class="co"># 306.5</span></span>
+<span><span class="co">#&gt; [1] 306.5</span></span>
+<span><span class="va">hs015</span><span class="op">$</span><span class="va">primal</span>                       <span class="co"># (0.5, 2)</span></span>
+<span><span class="co">#&gt; [1] 0.5 2.0</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="example-3-rosenbrock-unconstrained-with-and-without-a-hessian">Example 3: Rosenbrock — unconstrained, with and without a
+Hessian<a class="anchor" aria-label="anchor" href="#example-3-rosenbrock-unconstrained-with-and-without-a-hessian"></a>
+</h2>
+<p>The Rosenbrock “banana” function is the classic unconstrained test
+problem, with global minimum
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>
+at
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mn>1</mn><mo>,</mo><mn>1</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(1, 1)</annotation></semantics></math>.
+With no constraints (<code>m = 0</code>) there is no Jacobian, and the
+Lagrangian Hessian reduces to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>σ</mi><msup><mi>∇</mi><mn>2</mn></msup><mi>f</mi></mrow><annotation encoding="application/x-tex">\sigma \nabla^2 f</annotation></semantics></math>
+(so <code>lambda</code> is unused).</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">rosen</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/uno_solve.html">uno_solve</a></span><span class="op">(</span></span>
+<span>  n <span class="op">=</span> <span class="fl">2L</span>, lb <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="cn">Inf</span>, <span class="op">-</span><span class="cn">Inf</span><span class="op">)</span>, ub <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="cn">Inf</span>, <span class="cn">Inf</span><span class="op">)</span>, sense <span class="op">=</span> <span class="st">"minimize"</span>,</span>
+<span></span>
+<span>  obj  <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="op">(</span><span class="fl">1</span> <span class="op">-</span> <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">)</span><span class="op">^</span><span class="fl">2</span> <span class="op">+</span> <span class="fl">100</span> <span class="op">*</span> <span class="op">(</span><span class="va">x</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span> <span class="op">-</span> <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span><span class="op">^</span><span class="fl">2</span>,</span>
+<span>  grad <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    <span class="op">-</span><span class="fl">2</span> <span class="op">*</span> <span class="op">(</span><span class="fl">1</span> <span class="op">-</span> <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">)</span> <span class="op">-</span> <span class="fl">400</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">*</span> <span class="op">(</span><span class="va">x</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span> <span class="op">-</span> <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span>,</span>
+<span>    <span class="fl">200</span> <span class="op">*</span> <span class="op">(</span><span class="va">x</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span> <span class="op">-</span> <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span></span>
+<span>  <span class="op">)</span>,</span>
+<span></span>
+<span>  m <span class="op">=</span> <span class="fl">0L</span>, cl <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">numeric</a></span><span class="op">(</span><span class="op">)</span>, cu <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">numeric</a></span><span class="op">(</span><span class="op">)</span>, cons <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">numeric</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  jac_rows <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">integer</a></span><span class="op">(</span><span class="op">)</span>, jac_cols <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">integer</a></span><span class="op">(</span><span class="op">)</span>, jac <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">numeric</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span></span>
+<span>  hess_rows <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">as.integer</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">2</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  hess_cols <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">as.integer</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">1</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  hess <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span>, <span class="va">sigma</span>, <span class="va">lambda</span><span class="op">)</span> <span class="va">sigma</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    <span class="fl">2</span> <span class="op">-</span> <span class="fl">400</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span> <span class="op">+</span> <span class="fl">1200</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">^</span><span class="fl">2</span>,   <span class="co"># (1,1)</span></span>
+<span>    <span class="op">-</span><span class="fl">400</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span>,                      <span class="co"># (2,1)</span></span>
+<span>    <span class="fl">200</span>                               <span class="co"># (2,2)</span></span>
+<span>  <span class="op">)</span>,</span>
+<span></span>
+<span>  x0 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">1.2</span>, <span class="fl">1</span><span class="op">)</span>, preset <span class="op">=</span> <span class="st">"ipopt"</span>, base_indexing <span class="op">=</span> <span class="fl">1L</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  options <span class="op">=</span> <span class="va">quiet</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">rosen</span><span class="op">$</span><span class="va">primal</span></span>
+<span><span class="co">#&gt; [1] 1 1</span></span></code></pre></div>
+<p>If coding an exact Hessian is inconvenient, pass
+<code>hess = NULL</code> (with empty
+<code>hess_rows</code>/<code>hess_cols</code>); Uno then builds an
+L-BFGS approximation from gradients. This is only available with the
+<strong><code>ipopt</code></strong> preset — the HiGHS QP solver behind
+<code>filtersqp</code> requires an explicit Hessian.</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">rosen_lm</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/uno_solve.html">uno_solve</a></span><span class="op">(</span></span>
+<span>  n <span class="op">=</span> <span class="fl">2L</span>, lb <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="cn">Inf</span>, <span class="op">-</span><span class="cn">Inf</span><span class="op">)</span>, ub <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="cn">Inf</span>, <span class="cn">Inf</span><span class="op">)</span>, sense <span class="op">=</span> <span class="st">"minimize"</span>,</span>
+<span>  obj  <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="op">(</span><span class="fl">1</span> <span class="op">-</span> <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">)</span><span class="op">^</span><span class="fl">2</span> <span class="op">+</span> <span class="fl">100</span> <span class="op">*</span> <span class="op">(</span><span class="va">x</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span> <span class="op">-</span> <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span><span class="op">^</span><span class="fl">2</span>,</span>
+<span>  grad <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    <span class="op">-</span><span class="fl">2</span> <span class="op">*</span> <span class="op">(</span><span class="fl">1</span> <span class="op">-</span> <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">)</span> <span class="op">-</span> <span class="fl">400</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">*</span> <span class="op">(</span><span class="va">x</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span> <span class="op">-</span> <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span>,</span>
+<span>    <span class="fl">200</span> <span class="op">*</span> <span class="op">(</span><span class="va">x</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span> <span class="op">-</span> <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  m <span class="op">=</span> <span class="fl">0L</span>, cl <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">numeric</a></span><span class="op">(</span><span class="op">)</span>, cu <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">numeric</a></span><span class="op">(</span><span class="op">)</span>, cons <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">numeric</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  jac_rows <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">integer</a></span><span class="op">(</span><span class="op">)</span>, jac_cols <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">integer</a></span><span class="op">(</span><span class="op">)</span>, jac <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">numeric</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  hess_rows <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">integer</a></span><span class="op">(</span><span class="op">)</span>, hess_cols <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">integer</a></span><span class="op">(</span><span class="op">)</span>, hess <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  x0 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">1.2</span>, <span class="fl">1</span><span class="op">)</span>, preset <span class="op">=</span> <span class="st">"ipopt"</span>, base_indexing <span class="op">=</span> <span class="fl">1L</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  options <span class="op">=</span> <span class="va">quiet</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">rosen_lm</span><span class="op">$</span><span class="va">primal</span></span>
+<span><span class="co">#&gt; [1] 1 1</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="example-4-maximum-entropy-distribution-equality-constraints">Example 4: Maximum-entropy distribution — equality constraints<a class="anchor" aria-label="anchor" href="#example-4-maximum-entropy-distribution-equality-constraints"></a>
+</h2>
+<p>A staple of statistics and information-theory courses: among all
+probability distributions
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>p</mi><annotation encoding="application/x-tex">p</annotation></semantics></math>
+on
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">{</mo><mn>1</mn><mo>,</mo><mi>…</mi><mo>,</mo><mi>K</mi><mo stretchy="false" form="postfix">}</mo></mrow><annotation encoding="application/x-tex">\{1, \dots, K\}</annotation></semantics></math>
+with a prescribed mean
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>μ</mi><annotation encoding="application/x-tex">\mu</annotation></semantics></math>,
+find the one of maximum entropy. Equivalently, minimize the negative
+entropy
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mo>∑</mo><mi>i</mi></msub><msub><mi>p</mi><mi>i</mi></msub><mrow><mi mathvariant="normal">log</mi><mo>⁡</mo></mrow><msub><mi>p</mi><mi>i</mi></msub></mrow><annotation encoding="application/x-tex">\sum_i p_i \log p_i</annotation></semantics></math>
+subject to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mo>∑</mo><mi>i</mi></msub><msub><mi>p</mi><mi>i</mi></msub><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\sum_i p_i = 1</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mo>∑</mo><mi>i</mi></msub><mi>i</mi><mspace width="0.167em"></mspace><msub><mi>p</mi><mi>i</mi></msub><mo>=</mo><mi>μ</mi></mrow><annotation encoding="application/x-tex">\sum_i i\,p_i = \mu</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>p</mi><mi>i</mi></msub><mo>≥</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">p_i \ge 0</annotation></semantics></math>.</p>
+<p>Both constraints are <strong>linear</strong>, so their Hessians
+vanish — the Lagrangian Hessian is just
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>σ</mi><mspace width="0.167em"></mspace><mrow><mi mathvariant="normal">d</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">g</mi></mrow><mo stretchy="false" form="prefix">(</mo><mn>1</mn><mi>/</mi><msub><mi>p</mi><mi>i</mi></msub><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\sigma\,\mathrm{diag}(1/p_i)</annotation></semantics></math>,
+a diagonal matrix, and the sign convention is irrelevant.</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">K</span> <span class="op">&lt;-</span> <span class="fl">5L</span>; <span class="va">support</span> <span class="op">&lt;-</span> <span class="fl">1</span><span class="op">:</span><span class="va">K</span>; <span class="va">mu</span> <span class="op">&lt;-</span> <span class="fl">2</span></span>
+<span></span>
+<span><span class="va">ent</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/uno_solve.html">uno_solve</a></span><span class="op">(</span></span>
+<span>  n <span class="op">=</span> <span class="va">K</span>, lb <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1e-8</span>, <span class="va">K</span><span class="op">)</span>, ub <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span>, <span class="va">K</span><span class="op">)</span>, sense <span class="op">=</span> <span class="st">"minimize"</span>,   <span class="co"># p_i &gt; 0</span></span>
+<span></span>
+<span>  obj  <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">p</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">p</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  grad <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">p</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span> <span class="op">+</span> <span class="fl">1</span>,</span>
+<span></span>
+<span>  m <span class="op">=</span> <span class="fl">2L</span>, cl <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="va">mu</span><span class="op">)</span>, cu <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="va">mu</span><span class="op">)</span>,                <span class="co"># two equalities</span></span>
+<span>  cons <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">p</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">support</span> <span class="op">*</span> <span class="va">p</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  jac_rows <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">2</span>, each <span class="op">=</span> <span class="va">K</span><span class="op">)</span>,</span>
+<span>  jac_cols <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="va">K</span><span class="op">)</span>, times <span class="op">=</span> <span class="fl">2L</span><span class="op">)</span>,</span>
+<span>  jac <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">p</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span>, <span class="va">K</span><span class="op">)</span>, <span class="va">support</span><span class="op">)</span>,             <span class="co"># constant Jacobian</span></span>
+<span></span>
+<span>  hess_rows <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="va">K</span><span class="op">)</span>, hess_cols <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="va">K</span><span class="op">)</span>,      <span class="co"># diagonal only</span></span>
+<span>  hess <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">p</span>, <span class="va">sigma</span>, <span class="va">lambda</span><span class="op">)</span> <span class="va">sigma</span> <span class="op">*</span> <span class="op">(</span><span class="fl">1</span> <span class="op">/</span> <span class="va">p</span><span class="op">)</span>,</span>
+<span></span>
+<span>  x0 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span> <span class="op">/</span> <span class="va">K</span>, <span class="va">K</span><span class="op">)</span>, preset <span class="op">=</span> <span class="st">"ipopt"</span>, base_indexing <span class="op">=</span> <span class="fl">1L</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  options <span class="op">=</span> <span class="va">quiet</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">ent</span><span class="op">$</span><span class="va">primal</span>, <span class="fl">5</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] 0.45936 0.26079 0.14806 0.08406 0.04772</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>total <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">ent</span><span class="op">$</span><span class="va">primal</span><span class="op">)</span>, mean <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">support</span> <span class="op">*</span> <span class="va">ent</span><span class="op">$</span><span class="va">primal</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt; total  mean </span></span>
+<span><span class="co">#&gt;     1     2</span></span></code></pre></div>
+<p>Maximum-entropy theory says the answer is a discrete exponential
+distribution
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>p</mi><mi>i</mi></msub><mo>∝</mo><msup><mi>e</mi><mrow><mi>−</mi><mi>θ</mi><mi>i</mi></mrow></msup></mrow><annotation encoding="application/x-tex">p_i \propto e^{-\theta i}</annotation></semantics></math>,
+with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>θ</mi><annotation encoding="application/x-tex">\theta</annotation></semantics></math>
+the multiplier on the mean constraint — and <code>constraint_dual</code>
+recovers exactly that:</p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">theta</span> <span class="op">&lt;-</span> <span class="va">ent</span><span class="op">$</span><span class="va">constraint_dual</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span></span>
+<span><span class="va">cf</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="op">-</span><span class="va">theta</span> <span class="op">*</span> <span class="va">support</span><span class="op">)</span>; <span class="va">cf</span> <span class="op">&lt;-</span> <span class="va">cf</span> <span class="op">/</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">cf</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">cf</span>, <span class="fl">5</span><span class="op">)</span>                       <span class="co"># matches ent$primal</span></span>
+<span><span class="co">#&gt; [1] 0.04772 0.08406 0.14806 0.26079 0.45936</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="example-5-a-convex-qp-via-the-sqp-highs-preset">Example 5: a convex QP via the SQP (HiGHS) preset<a class="anchor" aria-label="anchor" href="#example-5-a-convex-qp-via-the-sqp-highs-preset"></a>
+</h2>
+<p>The examples above all use the interior-point <code>ipopt</code>
+preset because they are either nonconvex (HS015, Rosenbrock) or just
+convenient to solve that way. For a <strong>convex</strong> problem the
+SQP preset <code>filtersqp</code>, backed by HiGHS, applies. Here is a
+small convex QP,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">min</mi><mo>⁡</mo></mrow><mo stretchy="false" form="prefix">(</mo><msub><mi>x</mi><mn>1</mn></msub><mo>−</mo><mn>1</mn><msup><mo stretchy="false" form="postfix">)</mo><mn>2</mn></msup><mo>+</mo><mo stretchy="false" form="prefix">(</mo><msub><mi>x</mi><mn>2</mn></msub><mo>−</mo><mn>2.5</mn><msup><mo stretchy="false" form="postfix">)</mo><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">\min (x_1-1)^2 + (x_2-2.5)^2</annotation></semantics></math>
+subject to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>x</mi><mn>1</mn></msub><mo>+</mo><msub><mi>x</mi><mn>2</mn></msub><mo>≤</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">x_1 + x_2 \le 3</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>≥</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">x \ge 0</annotation></semantics></math>:</p>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">qp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/uno_solve.html">uno_solve</a></span><span class="op">(</span></span>
+<span>  n <span class="op">=</span> <span class="fl">2L</span>, lb <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0</span><span class="op">)</span>, ub <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="cn">Inf</span>, <span class="cn">Inf</span><span class="op">)</span>, sense <span class="op">=</span> <span class="st">"minimize"</span>,</span>
+<span>  obj  <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="op">(</span><span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">-</span> <span class="fl">1</span><span class="op">)</span><span class="op">^</span><span class="fl">2</span> <span class="op">+</span> <span class="op">(</span><span class="va">x</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span> <span class="op">-</span> <span class="fl">2.5</span><span class="op">)</span><span class="op">^</span><span class="fl">2</span>,</span>
+<span>  grad <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2</span> <span class="op">*</span> <span class="op">(</span><span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">-</span> <span class="fl">1</span><span class="op">)</span>, <span class="fl">2</span> <span class="op">*</span> <span class="op">(</span><span class="va">x</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span> <span class="op">-</span> <span class="fl">2.5</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  m <span class="op">=</span> <span class="fl">1L</span>, cl <span class="op">=</span> <span class="op">-</span><span class="cn">Inf</span>, cu <span class="op">=</span> <span class="fl">3</span>,</span>
+<span>  cons <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">+</span> <span class="va">x</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span>,</span>
+<span>  jac_rows <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">as.integer</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">1</span><span class="op">)</span><span class="op">)</span>, jac_cols <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">as.integer</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  jac <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">1</span><span class="op">)</span>,</span>
+<span>  hess_rows <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">as.integer</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span>, hess_cols <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">as.integer</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  hess <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span>, <span class="va">sigma</span>, <span class="va">lambda</span><span class="op">)</span> <span class="va">sigma</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2</span>, <span class="fl">2</span><span class="op">)</span>,</span>
+<span>  x0 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0</span><span class="op">)</span>, preset <span class="op">=</span> <span class="st">"filtersqp"</span>, base_indexing <span class="op">=</span> <span class="fl">1L</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  options <span class="op">=</span> <span class="va">quiet</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">qp</span><span class="op">$</span><span class="va">primal</span></span>
+<span><span class="co">#&gt; [1] 0.75 2.25</span></span>
+<span><span class="va">qp</span><span class="op">$</span><span class="va">objective</span></span>
+<span><span class="co">#&gt; [1] 0.125</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="choosing-a-preset">Choosing a preset<a class="anchor" aria-label="anchor" href="#choosing-a-preset"></a>
+</h2>
+<ul>
+<li>
+<strong>Convex</strong> problems — including the smooth problems
+produced by CVXR’s DNLP reduction — work with either preset.
+<code>filtersqp</code> (HiGHS) is natural for convex QP-shaped
+subproblems; <code>ipopt</code> (MUMPS) also works.
+<code>filtersqp</code> always requires an explicit Hessian (HiGHS cannot
+use an L-BFGS approximation).</li>
+<li>
+<strong>Nonconvex</strong> problems (HS015, Rosenbrock) produce
+indefinite subproblems that HiGHS cannot solve. Use the interior-point
+<code>ipopt</code> preset, which copes with indefiniteness through
+inertia correction in MUMPS.</li>
+</ul>
 </div>
 <div class="section level2">
 <h2 id="solver-options">Solver options<a class="anchor" aria-label="anchor" href="#solver-options"></a>
 </h2>
-<p>Beyond <code>preset</code>, any Uno solver option can be passed
-through <code>options</code> as a named list; values are coerced to each
-option’s declared type, and the options are applied <em>after</em> the
-preset so they override it. A few useful ones:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># cap the iteration count</span></span>
-<span><span class="fu"><a href="../reference/uno_solve.html">uno_solve</a></span><span class="op">(</span><span class="va">...</span>, preset <span class="op">=</span> <span class="st">"ipopt"</span>, options <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>max_iterations <span class="op">=</span> <span class="fl">50L</span><span class="op">)</span><span class="op">)</span></span>
+<p>Any Uno option can be passed through <code>options</code>; values are
+coerced to the option’s declared type and applied after the preset:</p>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># cap the iteration count and tighten the tolerance</span></span>
+<span><span class="fu"><a href="../reference/uno_solve.html">uno_solve</a></span><span class="op">(</span><span class="va">...</span>, preset <span class="op">=</span> <span class="st">"ipopt"</span>,</span>
+<span>          options <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>max_iterations <span class="op">=</span> <span class="fl">200L</span>, tolerance <span class="op">=</span> <span class="fl">1e-8</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># pick the linear solver explicitly, and silence output</span></span>
 <span><span class="fu"><a href="../reference/uno_solve.html">uno_solve</a></span><span class="op">(</span><span class="va">...</span>, preset <span class="op">=</span> <span class="st">"ipopt"</span>,</span>
 <span>          options <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>linear_solver <span class="op">=</span> <span class="st">"MUMPS"</span>, logger <span class="op">=</span> <span class="st">"SILENT"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p>An unknown option name, or a value the option rejects, raises an
 error rather than being silently ignored.</p>
-</div>
-<div class="section level2">
-<h2 id="choosing-a-preset">Choosing a preset<a class="anchor" aria-label="anchor" href="#choosing-a-preset"></a>
-</h2>
-<ul>
-<li>For <strong>convex</strong> problems — such as the smooth problems
-produced by CVXR’s DNLP reduction — <code>filtersqp</code> (HiGHS) and
-<code>ipopt</code> (MUMPS) both work, and an explicit Hessian must be
-supplied (HiGHS cannot use an L-BFGS approximation).</li>
-<li>For <strong>nonconvex</strong> problems like HS015, the SQP
-subproblems are indefinite; HiGHS cannot solve those, so use the
-interior-point <code>ipopt</code> preset (which handles indefiniteness
-through inertia correction in MUMPS), as above.</li>
-</ul>
 </div>
 <div class="section level2">
 <h2 id="notes">Notes<a class="anchor" aria-label="anchor" href="#notes"></a>
@@ -216,6 +595,10 @@ through inertia correction in MUMPS), as above.</li>
 hard dependency); no separate MUMPS installation is needed.</li>
 <li>Errors thrown inside a callback are caught and reported back to Uno
 as an evaluation error — they will not crash the R session.</li>
+<li>
+<code><a href="../reference/uno_solve.html">uno_solve()</a></code> also accepts a <code>log_callback</code> (a
+sink for Uno’s output stream); see <code><a href="../reference/uno_solve.html">?uno_solve</a></code> for the full
+argument list.</li>
 </ul>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
