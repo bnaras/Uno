@@ -321,6 +321,7 @@ static std::string optimization_status_name(uno_int s) {
     case UNO_TIME_LIMIT:        return "TIME_LIMIT";
     case UNO_EVALUATION_ERROR:  return "EVALUATION_ERROR";
     case UNO_ALGORITHMIC_ERROR: return "ALGORITHMIC_ERROR";
+    case UNO_USER_TERMINATION:  return "USER_TERMINATION";
     default:                    return "UNKNOWN";
   }
 }

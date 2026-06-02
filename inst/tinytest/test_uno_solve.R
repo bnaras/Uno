@@ -212,6 +212,41 @@ expect_true(is.integer(res_term$optimization_status))
 expect_false(is.null(names(res_term$optimization_status)))   # name preserved
 
 ## @unopy NONE
+## C4 (regression): the iter_callback termination semantics must hold across a
+## *multi-iteration* solve. The filtersqp smoke tests above converge in a single
+## acceptable iterate, so check_termination returns at the already-optimal branch
+## (Uno.cpp) before the user-termination callback ever governs anything -- they
+## cannot catch an inverted termination test. Rosenbrock under the ipopt preset
+## takes many iterations, so the callback's return value actually decides the
+## solve. This guards the Uno_C_API.cpp fix (`!= 0`, not `== 0`): FALSE must run
+## to SUCCESS over many callbacks, and TRUE must stop early as USER_TERMINATION.
+ros_obj  <- function(x) (1 - x[1])^2 + 100 * (x[2] - x[1]^2)^2
+ros_grad <- function(x) c(-2 * (1 - x[1]) - 400 * x[1] * (x[2] - x[1]^2),
+                          200 * (x[2] - x[1]^2))
+ros_hess <- function(x, sigma, lambda)
+  sigma * c(2 - 400 * x[2] + 1200 * x[1]^2, -400 * x[1], 200)
+ros_solve <- function(cb) uno_solve(
+  n = 2L, lb = c(-Inf, -Inf), ub = c(Inf, Inf), sense = "minimize",
+  obj = ros_obj, grad = ros_grad,
+  m = 0L, cl = numeric(), cu = numeric(), cons = function(x) numeric(),
+  jac_rows = integer(), jac_cols = integer(), jac = function(x) numeric(),
+  hess_rows = c(0L, 1L, 1L), hess_cols = c(0L, 0L, 1L), hess = ros_hess,
+  x0 = c(-1.2, 1), preset = "ipopt", base_indexing = 0L, verbose = FALSE,
+  iter_callback = cb
+)
+## FALSE -> runs to completion (fires on many acceptable iterates, converges)
+ros_calls <- 0L
+res_false <- ros_solve(function(info) { ros_calls <<- ros_calls + 1L; FALSE })
+expect_true(ros_calls > 1L)                                  # multi-iteration
+expect_equal(res_false$optimization_status, c(SUCCESS = 0L))
+expect_equal(res_false$primal, c(1, 1), tolerance = 1e-4)
+## TRUE on the 3rd acceptable iterate -> early stop, reported as USER_TERMINATION
+stop_calls <- 0L
+res_stop <- ros_solve(function(info) { stop_calls <<- stop_calls + 1L; stop_calls >= 3L })
+expect_equal(stop_calls, 3L)
+expect_equal(res_stop$optimization_status, c(USER_TERMINATION = 5L))
+
+## @unopy NONE
 ## C5: log_callback receives Uno's output stream (a sink for the solver log).
 log_chunks <- character(0)
 res_log <- uno_solve(
