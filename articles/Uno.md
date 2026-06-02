@@ -489,6 +489,76 @@ uno_solve(..., preset = "ipopt",
 An unknown option name, or a value the option rejects, raises an error
 rather than being silently ignored.
 
+## Monitoring and early termination
+
+[`uno_solve()`](https://bnaras.github.io/Uno/reference/uno_solve.md)
+accepts an optional `iter_callback`, a `function(info)` that Uno calls
+at each *acceptable iterate*. `info` is a named list carrying the
+current `primals`, the duals (`lower_bound_dual`, `upper_bound_dual`,
+`constraint_dual`), the `objective_multiplier`, and the KKT residuals
+(`primal_feasibility`, `stationarity`, `complementarity`). The
+callback’s return value controls the solve: return `FALSE` to continue,
+or `TRUE` to **stop early** — in which case the `optimization_status` is
+`USER_TERMINATION`.
+
+Used as a pure monitor (always returning `FALSE`), it lets you watch
+convergence. Here we record the stationarity residual at each iterate of
+the Rosenbrock solve:
+
+``` r
+
+ros_obj  <- function(x) (1 - x[1])^2 + 100 * (x[2] - x[1]^2)^2
+ros_grad <- function(x) c(-2 * (1 - x[1]) - 400 * x[1] * (x[2] - x[1]^2),
+                          200 * (x[2] - x[1]^2))
+ros_hess <- function(x, sigma, lambda)
+  sigma * c(2 - 400 * x[2] + 1200 * x[1]^2, -400 * x[1], 200)
+
+stationarity <- numeric(0)
+mon <- uno_solve(
+  n = 2L, lb = c(-Inf, -Inf), ub = c(Inf, Inf), sense = "minimize",
+  obj = ros_obj, grad = ros_grad,
+  m = 0L, cl = numeric(), cu = numeric(), cons = function(x) numeric(),
+  jac_rows = integer(), jac_cols = integer(), jac = function(x) numeric(),
+  hess_rows = as.integer(c(1, 2, 2)), hess_cols = as.integer(c(1, 1, 2)), hess = ros_hess,
+  x0 = c(-1.2, 1), preset = "ipopt", base_indexing = 1L, verbose = FALSE, options = quiet,
+  iter_callback = function(info) {
+    stationarity[[length(stationarity) + 1L]] <<- info$stationarity
+    FALSE                                            # keep going
+  }
+)
+names(mon$optimization_status)
+#> [1] "SUCCESS"
+length(stationarity)                                 # one entry per acceptable iterate
+#> [1] 21
+signif(range(stationarity), 3)                       # residual shrinks toward 0
+#> [1] 3.73e-10 2.60e+01
+```
+
+Returning `TRUE` stops the solve. For example, to bail out after five
+acceptable iterates — note the super-assignment `<<-`, needed so the
+counter persists across calls rather than writing a local copy:
+
+``` r
+
+iter <- 0L
+stopped <- uno_solve(
+  n = 2L, lb = c(-Inf, -Inf), ub = c(Inf, Inf), sense = "minimize",
+  obj = ros_obj, grad = ros_grad,
+  m = 0L, cl = numeric(), cu = numeric(), cons = function(x) numeric(),
+  jac_rows = integer(), jac_cols = integer(), jac = function(x) numeric(),
+  hess_rows = as.integer(c(1, 2, 2)), hess_cols = as.integer(c(1, 1, 2)), hess = ros_hess,
+  x0 = c(-1.2, 1), preset = "ipopt", base_indexing = 1L, verbose = FALSE, options = quiet,
+  iter_callback = function(info) { iter <<- iter + 1L; iter >= 5L }
+)
+iter                                 # stopped after the 5th acceptable iterate
+#> [1] 5
+names(stopped$optimization_status)   # "USER_TERMINATION"
+#> [1] "USER_TERMINATION"
+```
+
+An error thrown inside the callback is caught and treated as “do not
+terminate,” so a buggy monitor cannot crash the solve.
+
 ## Notes
 
 - MUMPS is provided at run time by the `rmumps` package (a hard
