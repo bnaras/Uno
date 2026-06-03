@@ -155,7 +155,10 @@ fi
 
 eval ${CMAKE_EXE} "${UNO_SRC_DIR}" ${CMAKE_OPTS} ${CMAKE_PLATFORM_OPTS} || exit 1
 
-${MAKE} -j"${UNO_BUILD_JOBS:-4}" install || exit 1
+# Default to 2 parallel jobs: CRAN policy asks installs to use at most 2 cores
+# (a higher default tripped the "CPU time N times elapsed" install NOTE).
+# Developers/CI can raise it via UNO_BUILD_JOBS.
+${MAKE} -j"${UNO_BUILD_JOBS:-2}" install || exit 1
 
 cd "${R_UNO_PKG_HOME}"
 

@@ -127,7 +127,10 @@ fi
 # placeholder files and no pollution of the unpacked source tree.
 
 eval ${CMAKE_EXE} -S "${HIGHS_SRC_DIR}" -B "${HIGHS_BUILD_DIR}" ${CMAKE_OPTS} ${CMAKE_PLATFORM_OPTS} || exit 1
-${CMAKE_EXE} --build "${HIGHS_BUILD_DIR}" --target install -j"${UNO_BUILD_JOBS:-4}" || exit 1
+# Default to 2 parallel jobs: CRAN policy asks installs to use at most 2 cores
+# (a higher default tripped the "CPU time N times elapsed" install NOTE).
+# Developers/CI can raise it via UNO_BUILD_JOBS.
+${CMAKE_EXE} --build "${HIGHS_BUILD_DIR}" --target install -j"${UNO_BUILD_JOBS:-2}" || exit 1
 
 cd "${R_UNO_PKG_HOME}"
 
