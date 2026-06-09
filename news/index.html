@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">Uno</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.7.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.7.3-1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -33,11 +33,16 @@
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="2.7.3" id="uno-273">Uno 2.7.3<a class="anchor" aria-label="anchor" href="#uno-273"></a></h2>
+<h2 class="pkg-version" data-toc-text="2.7.3-1" id="uno-273-1">Uno 2.7.3-1<a class="anchor" aria-label="anchor" href="#uno-273-1"></a></h2>
+<ul><li>Fixed the bundled HiGHS/Uno source build on non-shlib R (CRAN fedora-gcc/clang, musl): use <code>R.home("include")</code> for R’s header path, and normalize a <code>lib64/</code> <code>libuno.a</code> install to <code>lib/</code>.</li>
+</ul></div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="2.7.3" id="uno-273">Uno 2.7.3<a class="anchor" aria-label="anchor" href="#uno-273"></a></h2><p class="text-muted">CRAN release: 2026-06-08</p>
 <ul><li><p>Updated the bundled Uno C++ solver to upstream release 2.7.3. The R-packaging patch set was rebased onto v2.7.3; the C API is backward-compatible (the binding is unchanged). One internal fix: Uno 2.7.3 relocated <code>Options::dump_default_options()</code>, so its console output is re-routed through the R-output mechanism (<code>UNO_COUT</code>) to keep the compiled library free of raw <code>std::cout</code> for the CRAN compiled-code check.</p></li>
 <li><p>Added <code>inst/COPYRIGHTS</code> documenting the copyright holders and licenses of the bundled third-party libraries: the Uno C++ solver and HiGHS, including the components HiGHS itself bundles (AMD, METIS, pdqsort, zstr, rcm, filereaderlp, Catch2, and CLI11). All are permissive and MIT-compatible (MIT / BSD-3-Clause / Apache-2.0 / zlib / Boost Software License 1.0); none is copyleft. A <code>Copyright: file inst/COPYRIGHTS</code> field and a <code>cph</code> entry for the HiGHS development team record this in the package metadata. Because the file lives under <code>inst/</code>, the attribution survives installation. MUMPS (reached at run time through the GPL-licensed <code>rmumps</code> package) and BQPD are not bundled.</p></li>
 </ul></div>
-  </main></div>
+  </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
+    </nav></aside></div>
 
 
     <footer><div class="pkgdown-footer-left">

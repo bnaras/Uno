@@ -22,14 +22,14 @@ Source:
 [`inst/CITATION`](https://github.com/bnaras/Uno/blob/master/inst/CITATION)
 
 Narasimhan B, Vanaret C, Leyffer S (2026). *Uno: R Interface to the Uno
-Nonlinear Optimization Solver*. R package version 2.7.3,
+Nonlinear Optimization Solver*. R package version 2.7.3-1,
 <https://github.com/bnaras/Uno>.
 
     @Manual{,
       title = {{Uno}: R Interface to the Uno Nonlinear Optimization Solver},
       author = {Balasubramanian Narasimhan and Charlie Vanaret and Sven Leyffer},
       year = {2026},
-      note = {R package version 2.7.3},
+      note = {R package version 2.7.3-1},
       url = {https://github.com/bnaras/Uno},
     }
 
