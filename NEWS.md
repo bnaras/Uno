@@ -1,3 +1,9 @@
+# Uno 2.7.3-1
+
+* Fixed the bundled HiGHS/Uno source build on non-shlib R (CRAN fedora-gcc/clang,
+  musl): use `R.home("include")` for R's header path, and normalize a `lib64/`
+  `libuno.a` install to `lib/`.
+
 # Uno 2.7.3
 
 * Updated the bundled Uno C++ solver to upstream release 2.7.3. The R-packaging

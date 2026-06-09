@@ -62,12 +62,16 @@ export LDFLAGS=`"${R_HOME}/bin/R" CMD config LDFLAGS`
 # files using std::cout) routes std::cout/std::cerr to R's console through a
 # streambuf over Rprintf/REprintf, so the std::cout symbol never appears in
 # libuno.a (needed for R CMD check "checking compiled code").  The R header
-# include path is queried from R itself: on Debian/Ubuntu and r-universe the
-# headers live in R_INCLUDE_DIR (e.g. /usr/share/R/include), NOT ${R_HOME}/include,
-# so a hardcoded -I${R_HOME}/include misses <R_ext/Print.h>/<R_ext/Error.h>.
+# include path comes from R.home("include") (== R_INCLUDE_DIR), always present and
+# correct on every platform (Debian/Ubuntu and r-universe put the headers in e.g.
+# /usr/share/R/include, NOT ${R_HOME}/include).  Do NOT use `R CMD config --cppflags`:
+# that is the "compile against the R library" (embedding) query and returns nothing
+# -- "R was not built as a library" -- on an R built without --enable-R-shlib (CRAN's
+# fedora-gcc/clang and musl machines), which misses <R_ext/Print.h>/<R_ext/Error.h>.
 # Uno's C++ uses no C printf or C `stdout` token, so no funopen/fopencookie FILE*
 # redirect is needed and the fix is identically clean on macOS, Linux and Windows.
-R_HDR_FLAGS=`"${R_HOME}/bin/R" CMD config --cppflags`
+R_INCLUDE_DIR=`"${R_HOME}/bin/Rscript" -e 'cat(R.home("include"))'`
+R_HDR_FLAGS="-I${R_INCLUDE_DIR}"
 UNO_RIO_FLAGS="-DUNO_R_PRINT ${R_HDR_FLAGS}"
 export CFLAGS="${CFLAGS} ${UNO_RIO_FLAGS}"
 export CXXFLAGS="${CXXFLAGS} ${UNO_RIO_FLAGS}"
@@ -161,6 +165,14 @@ eval ${CMAKE_EXE} "${UNO_SRC_DIR}" ${CMAKE_OPTS} ${CMAKE_PLATFORM_OPTS} || exit 
 ${MAKE} -j"${UNO_BUILD_JOBS:-2}" install || exit 1
 
 cd "${R_UNO_PKG_HOME}"
+
+# Uno (like HiGHS) may install into lib/ or lib64/; normalize to lib/ so the
+# Makevars `-L${UNO_INSTALL_DIR}/lib -luno` link path is correct on multilib
+# distros (Fedora/RHEL put 64-bit static libs in lib64/).  Mirrors build_highs.sh.
+if test ! -f "${UNO_INSTALL_DIR}/lib/libuno.a" && test -f "${UNO_INSTALL_DIR}/lib64/libuno.a"; then
+    mkdir -p "${UNO_INSTALL_DIR}/lib"
+    cp "${UNO_INSTALL_DIR}/lib64/libuno.a" "${UNO_INSTALL_DIR}/lib/"
+fi
 
 if test ! -f "${UNO_INSTALL_DIR}/lib/libuno.a"; then
     echo "Uno static library (libuno.a) was not produced!"
