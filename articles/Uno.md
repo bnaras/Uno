@@ -13,7 +13,7 @@ as the nonlinear (DNLP) solver backend for
 ``` r
 
 uno_version()
-#> [1] "2.7.3"
+#> [1] "2.7.4"
 ```
 
 Two solver paths are available, selected with the `preset` argument:
