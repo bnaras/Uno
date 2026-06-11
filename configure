@@ -47,21 +47,14 @@ fi
 bash inst/build_uno.sh || { echo "Uno build failed!"; exit 1; }
 cd "${R_UNO_PKG_HOME}"
 
-# Now that the static libraries (src/highslib, src/unolib) are built, drop the
-# bundled HiGHS and Uno SOURCE trees on a TARBALL install to shrink the
-# installed package -- the binding links the built libs+headers, not the
-# sources.  Mirrors the scip R package's configure, which keys off pre-built
-# vignettes in inst/doc/ as the tarball-install marker.  Extra guard vs. scip:
-# inst/HiGHS and inst/uno are git SUBMODULES, so we only remove them when they
-# are NOT a submodule working tree (a tarball has no nested .git), to never
-# delete a developer's checked-out source during an in-place `R CMD INSTALL .`.
-# The bundled source lives under inst/ (not src/) so that R CMD check's src-only
-# pragma/line-ending scans never see the vendored third-party files; removing it
-# here keeps it out of the *installed* package (R copies inst/ after configure).
-if test -d inst/doc; then
-    test -e inst/HiGHS/.git || rm -rf inst/HiGHS
-    test -e inst/uno/.git   || rm -rf inst/uno
-fi
+# The static libraries (src/highslib, src/unolib) are now built; the binding
+# links the built libs+headers, not the bundled HiGHS/Uno SOURCE trees.  Those
+# trees live under inst/ (not src/) so R CMD check's src-only pragma/line-ending
+# scans never see the vendored third-party files.  They are kept OUT of the
+# *installed* package via the top-level .Rinstignore (patterns /HiGHS, /uno, and
+# /build_.*\.sh$), per CRAN's request -- NOT by deleting them from the extracted
+# tarball here (which also avoids ever touching a developer's submodule checkout
+# during an in-place `R CMD INSTALL .`).  See Writing R Extensions, ".Rinstignore".
 
 # Remove the intermediate CMake build trees: the libraries are installed under
 # src/highslib and src/unolib, so the build dirs are dead weight, and their

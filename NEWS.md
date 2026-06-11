@@ -1,3 +1,14 @@
+# Uno 2.7.3-3
+
+* Keep the bundled HiGHS/Uno source trees out of the *installed* package via a
+  top-level `.Rinstignore` (patterns `/HiGHS`, `/uno`, and `/build_.*\.sh$`)
+  rather than deleting them in `configure` / `configure.win` during a tarball
+  install. This is the documented R mechanism (Writing R Extensions,
+  ".Rinstignore"), it never touches a developer's submodule checkout during an
+  in-place `R CMD INSTALL .`, and it is what CRAN requested. The static
+  libraries are still built from the bundled sources at configure time; only the
+  *installed* copy omits the third-party source trees.
+
 # Uno 2.7.3-2
 
 * Fixed an undefined-behavior report from CRAN's gcc-SAN / clang-SAN checks
