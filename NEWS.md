@@ -6,6 +6,14 @@
   user-termination fix) was rebased onto upstream `v2.7.4` with no conflicts; the
   C API is backward-compatible and the R binding is unchanged.
 
+* Build: forward the HiGHS include root into the bundled Uno static-library
+  compile. Uno 2.7.4 switched `HiGHSSolver.hpp` to `#include <highs/Highs.h>` (a
+  prefixed bracket include) while its CMake still adds only
+  `<highs-lib-dir>/../include/highs` to the search path, so the bundled library
+  failed to build with "'highs/Highs.h' file not found". `inst/build_uno.sh` now
+  puts both the include root and `include/highs` on `CFLAGS`/`CXXFLAGS`, leaving
+  the vendored Uno source untouched. (An upstream inconsistency in Uno 2.7.4.)
+
 # Uno 2.7.3-3
 
 * Keep the bundled HiGHS/Uno source trees out of the *installed* package via a

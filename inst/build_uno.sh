@@ -115,6 +115,16 @@ HIGHS_OPTS=""
 if test -n "${HIGHS_LIB}"; then
     HIGHS_OPTS="-DHIGHS=${HIGHS_LIB}"
     echo "HiGHS: ${HIGHS_LIB}"
+    # Uno's CMake adds only ${HIGHS_DIRECTORY}/../include/highs to the include
+    # path (CMakeLists.txt, find_library(HIGHS) branch). That satisfies the
+    # quote-include "Highs.h" (HiGHSWorkspace.hpp) but NOT the bracket-include
+    # <highs/Highs.h> that Uno 2.7.4 introduced in HiGHSSolver.hpp, which needs
+    # the include ROOT on the search path. Put BOTH on the Uno compile flags so
+    # the bundled static library builds regardless of include style (mirrors how
+    # UNO_RIO_FLAGS above is injected through CXXFLAGS for the CMake build).
+    HIGHS_INC_ROOT="$(dirname "$(dirname "${HIGHS_LIB}")")/include"
+    export CFLAGS="${CFLAGS} -I${HIGHS_INC_ROOT} -I${HIGHS_INC_ROOT}/highs"
+    export CXXFLAGS="${CXXFLAGS} -I${HIGHS_INC_ROOT} -I${HIGHS_INC_ROOT}/highs"
 fi
 
 #
