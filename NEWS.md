@@ -1,3 +1,11 @@
+# Uno 2.7.4
+
+* Updated the bundled Uno C++ solver to upstream release 2.7.4. The R-packaging
+  patch set (C-API binding, MUMPS-via-rmumps, `std::cout`/`dump_default_options`
+  routing to R, the CRAN path-shortening renames, and the inverted
+  user-termination fix) was rebased onto upstream `v2.7.4` with no conflicts; the
+  C API is backward-compatible and the R binding is unchanged.
+
 # Uno 2.7.3-3
 
 * Keep the bundled HiGHS/Uno source trees out of the *installed* package via a
