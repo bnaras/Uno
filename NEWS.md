@@ -1,3 +1,13 @@
+# Uno 2.7.3-2
+
+* Fixed an undefined-behavior report from CRAN's gcc-SAN / clang-SAN checks
+  (`uno_binding.cpp`, `make_x`): for an unconstrained iterate the progress
+  callback passes a null constraint-multiplier pointer with length 0, and the
+  subsequent `memcpy` received a NULL source, which `-fsanitize=nonnull-attribute`
+  flags as undefined behavior even at length 0. The copy is now guarded. No
+  user-visible behavior change; verified under `clang -fsanitize=undefined` that
+  the report is present before the guard and gone after.
+
 # Uno 2.7.3-1
 
 * Fixed the bundled HiGHS/Uno source build on non-shlib R (CRAN fedora-gcc/clang,

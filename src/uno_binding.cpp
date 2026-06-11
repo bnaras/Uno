@@ -37,9 +37,15 @@ struct RCallbacks {
 };
 
 // Wrap a C buffer as a REALSXP the R closure can read. Caller PROTECTs.
+// Guard the copy: for an unconstrained iterate the callback passes a null
+// `x` with n == 0 (e.g. the constraint-multiplier array), and memcpy declares
+// both pointers nonnull -- passing NULL is UB even for length 0 and trips
+// the gcc/clang -fsanitize=nonnull-attribute check (CRAN gcc-SAN/clang-SAN).
 SEXP make_x(const double* x, uno_int n) {
   SEXP xr = Rf_allocVector(REALSXP, n);
-  std::memcpy(REAL(xr), x, static_cast<size_t>(n) * sizeof(double));
+  if (n > 0 && x != nullptr) {
+    std::memcpy(REAL(xr), x, static_cast<size_t>(n) * sizeof(double));
+  }
   return xr;
 }
 
