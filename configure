@@ -16,7 +16,7 @@ fi
 # Locate the MUMPS C-API headers shipped by the 'rmumps' package. build_uno.sh
 # compiles Uno's MUMPSSolver.cpp against these (header-only); we link NO MUMPS
 # library -- the single dmumps_c entry point is resolved at runtime from rmumps
-# via R_FindSymbol (see src/dmumps_shim.c). This enables the interior-point
+# via R_GetCCallable (see src/dmumps_shim.c). This enables the interior-point
 # (e.g. "ipopt") preset. Skip with R_UNO_NO_MUMPS=1 (filtersqp/HiGHS only).
 if test -z "${R_UNO_NO_MUMPS}"; then
     RMUMPS_INC=`"${R_HOME}/bin/Rscript" -e 'cat(system.file("include", package="rmumps"))'`

@@ -2,14 +2,14 @@
 #
 # configure.win -- Windows build of the Uno R package (Rtools/MinGW).
 #
-# Mirrors ./configure but writes src/Makevars.win, and builds WITHOUT MUMPS:
-# the interior-point ("ipopt") preset reaches MUMPS at runtime via
-# R_FindSymbol("dmumps_c","rmumps") (see src/dmumps_shim.c), but a Windows DLL
-# only exports symbols it explicitly declares, and rmumps.dll does not export
-# dmumps_c -- so that lookup cannot succeed on Windows.  We therefore build the
-# HiGHS-only configuration (filtersqp/SQP presets), which covers the convex
-# problems produced by CVXR's dnlp2smooth.  The ipopt tinytest is skipped on
-# Windows accordingly.
+# Mirrors ./configure (writing src/Makevars.win), MUMPS included.  The
+# interior-point ("ipopt") preset reaches MUMPS at runtime from the 'rmumps'
+# package; src/dmumps_shim.c resolves dmumps_c via R_GetCCallable("rmumps",
+# "dmumps_c"), the C-callable rmumps registers (>= 5.2.1-43).  That registry
+# works on Windows, unlike the old R_FindSymbol route (a Windows DLL exports
+# only symbols it explicitly declares, and rmumps does not export dmumps_c as a
+# dynamic symbol).  So the Windows build now enables the same MUMPS path as
+# Linux/macOS, and the ipopt/MUMPS tinytests run here too.
 
 R_UNO_PKG_HOME=`pwd`
 
@@ -19,10 +19,21 @@ if test -z "${R_HOME}"; then
     exit 1
 fi
 
-# MUMPS is unavailable on Windows (see header comment) -- force it off so
-# build_uno.sh compiles the HiGHS-only configuration.
-R_UNO_NO_MUMPS=1
-export R_UNO_NO_MUMPS
+# Locate the MUMPS C-API headers shipped by the 'rmumps' package (mirrors
+# ./configure). build_uno.sh compiles Uno's MUMPSSolver.cpp against these
+# (header-only); we link NO MUMPS library -- dmumps_c is resolved at runtime
+# from rmumps via R_GetCCallable (see src/dmumps_shim.c). This enables the
+# interior-point ("ipopt") preset. Skip with R_UNO_NO_MUMPS=1 (HiGHS only).
+if test -z "${R_UNO_NO_MUMPS}"; then
+    RMUMPS_INC=`"${R_HOME}/bin/Rscript" -e 'cat(system.file("include", package="rmumps"))'`
+    if test -z "${RMUMPS_INC}" || test ! -f "${RMUMPS_INC}/dmumps_c.h"; then
+        echo "rmumps headers not found (looked in '${RMUMPS_INC}')."
+        echo "Install 'rmumps' (>= 5.2.1-43), or set R_UNO_NO_MUMPS=1 to build without MUMPS."
+        exit 1
+    fi
+    export MUMPS_R_INCLUDE_DIRS="${RMUMPS_INC}"
+    echo "MUMPS headers (rmumps): ${MUMPS_R_INCLUDE_DIRS}"
+fi
 
 # Build the HiGHS QP/LP subproblem solver (static libhighs.a) from source.
 HIGHS_PKG_LIBS=""
