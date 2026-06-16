@@ -34,16 +34,11 @@
 
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="2.7.4" id="uno-274">Uno 2.7.4<a class="anchor" aria-label="anchor" href="#uno-274"></a></h2>
-<ul><li><p>Updated the bundled Uno C++ solver to upstream release 2.7.4. The R-packaging patch set (C-API binding, MUMPS-via-rmumps, <code>std::cout</code>/<code>dump_default_options</code> routing to R, the CRAN path-shortening renames, and the inverted user-termination fix) was rebased onto upstream <code>v2.7.4</code> with no conflicts; the C API is backward-compatible and the R binding is unchanged.</p></li>
-<li><p>Build: forward the HiGHS include root into the bundled Uno static-library compile. Uno 2.7.4 switched <code>HiGHSSolver.hpp</code> to <code>#include &lt;highs/Highs.h&gt;</code> (a prefixed bracket include) while its CMake still adds only <code>&lt;highs-lib-dir&gt;/../include/highs</code> to the search path, so the bundled library failed to build with “‘highs/Highs.h’ file not found”. <code>inst/build_uno.sh</code> now puts both the include root and <code>include/highs</code> on <code>CFLAGS</code>/<code>CXXFLAGS</code>, leaving the vendored Uno source untouched. (An upstream inconsistency in Uno 2.7.4.)</p></li>
-</ul></div>
-    <div class="section level2">
-<h2 class="pkg-version" data-toc-text="2.7.3-3" id="uno-273-3">Uno 2.7.3-3<a class="anchor" aria-label="anchor" href="#uno-273-3"></a></h2>
-<ul><li>Keep the bundled HiGHS/Uno source trees out of the <em>installed</em> package via a top-level <code>.Rinstignore</code> (patterns <code>/HiGHS</code>, <code>/uno</code>, and <code>/build_.*\.sh$</code>) rather than deleting them in <code>configure</code> / <code>configure.win</code> during a tarball install. This is the documented R mechanism (Writing R Extensions, “.Rinstignore”), it never touches a developer’s submodule checkout during an in-place <code>R CMD INSTALL .</code>, and it is what CRAN requested. The static libraries are still built from the bundled sources at configure time; only the <em>installed</em> copy omits the third-party source trees.</li>
-</ul></div>
-    <div class="section level2">
-<h2 class="pkg-version" data-toc-text="2.7.3-2" id="uno-273-2">Uno 2.7.3-2<a class="anchor" aria-label="anchor" href="#uno-273-2"></a></h2>
-<ul><li>Fixed an undefined-behavior report from CRAN’s gcc-SAN / clang-SAN checks (<code>uno_binding.cpp</code>, <code>make_x</code>): for an unconstrained iterate the progress callback passes a null constraint-multiplier pointer with length 0, and the subsequent <code>memcpy</code> received a NULL source, which <code>-fsanitize=nonnull-attribute</code> flags as undefined behavior even at length 0. The copy is now guarded. No user-visible behavior change; verified under <code>clang -fsanitize=undefined</code> that the report is present before the guard and gone after.</li>
+<ul><li><p>Fixed the interior-point (“ipopt”) preset on Windows, which failed with “The linear solver MUMPS is unknown”. The shim now resolves rmumps’ <code>dmumps_c</code> via <code>R_GetCCallable</code> (works on Windows) instead of <code>R_FindSymbol</code> (did not), and <code>configure.win</code> builds with MUMPS enabled. Requires <code>rmumps &gt;= 5.2.1-43</code>.</p></li>
+<li><p>Updated the bundled Uno C++ solver to upstream release 2.7.4. The R-packaging patch set rebased cleanly; the C API is backward-compatible and the R binding is unchanged.</p></li>
+<li><p>Build: forward the HiGHS include root into the bundled Uno compile, fixing a “‘highs/Highs.h’ file not found” error from Uno 2.7.4’s prefixed include.</p></li>
+<li><p>Keep the bundled HiGHS/Uno source trees out of the <em>installed</em> package via a top-level <code>.Rinstignore</code>, as CRAN requested; the static libraries are still built from the bundled sources at configure time.</p></li>
+<li><p>Fixed an undefined-behavior report from CRAN’s gcc-SAN / clang-SAN checks (<code>uno_binding.cpp</code>, <code>make_x</code>): a length-0 <code>memcpy</code> received a NULL source. The copy is now guarded; no user-visible behavior change.</p></li>
 </ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="2.7.3-1" id="uno-273-1">Uno 2.7.3-1<a class="anchor" aria-label="anchor" href="#uno-273-1"></a></h2><p class="text-muted">CRAN release: 2026-06-11</p>
