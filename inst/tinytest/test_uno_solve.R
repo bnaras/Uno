@@ -55,17 +55,37 @@ expect_equal(res_err$optimization_status, c(EVALUATION_ERROR = 3L))
 
 ## Everything below exercises the interior-point "ipopt" preset, whose KKT
 ## linear solver is MUMPS, reached at runtime from 'rmumps' via
-## R_FindSymbol("dmumps_c","rmumps"). That lookup cannot succeed on Windows (a
-## DLL only exports declared symbols and rmumps.dll does not export dmumps_c),
-## so the Windows build is HiGHS-only and these tests do not apply there. The
-## filtersqp/HiGHS smoke tests above already validate the Windows build.
-if (.Platform$OS.type == "windows")
-  exit_file("ipopt/MUMPS tests skipped on Windows (HiGHS-only build)")
+## R_GetCCallable("rmumps","dmumps_c") (see src/dmumps_shim.c). That C-callable
+## registry resolves on every platform, INCLUDING Windows, so these tests run
+## everywhere. (Before the R_GetCCallable fix the Windows build was HiGHS-only
+## and skipped this whole section, because the old R_FindSymbol route could not
+## see dmumps_c in rmumps.dll's export table. The regression block immediately
+## below guards that fix on Windows.)
+
+## @unopy NONE
+## REGRESSION (MUMPS on Windows): an UNCONSTRAINED convex NLP under the "ipopt"
+## preset. Uno routes an unconstrained problem to a pure-Newton method whose KKT
+## system is factored by MUMPS, so this is the minimal shape that fails when
+## dmumps_c resolution is broken -- exactly the solve that errored from CVXR's
+## dnlp2smooth on Windows ("The linear solver MUMPS is unknown") before the shim
+## switched from R_FindSymbol to R_GetCCallable. x* = (1, 2), f* = 0.
+res_unc_ip <- uno_solve(
+  n = 2L, lb = c(-Inf, -Inf), ub = c(Inf, Inf), sense = "minimize",
+  obj = obj, grad = grad,
+  m = 0L, cl = numeric(), cu = numeric(), cons = function(x) numeric(),
+  jac_rows = integer(), jac_cols = integer(), jac = function(x) numeric(),
+  hess_rows = c(0L, 1L), hess_cols = c(0L, 1L), hess = hess,
+  x0 = c(0, 0), preset = "ipopt", base_indexing = 0L, verbose = FALSE
+)
+expect_equal(res_unc_ip$optimization_status, c(SUCCESS = 0L))
+expect_equal(res_unc_ip$solution_status, c(FEASIBLE_KKT_POINT = 1L))
+expect_equal(res_unc_ip$objective, 0, tolerance = 1e-6)
+expect_equal(res_unc_ip$primal, c(1, 2), tolerance = 1e-5)
 
 ## @unopy NONE
 ## R smoke test: the interior-point "ipopt" preset on the trivial convex NLP
-## above, exercising the MUMPS linear-solver path (reached at runtime from the
-## 'rmumps' package via R_FindSymbol; see src/dmumps_shim.c). x* = (1, 2), f* = 0.
+## above (constrained form), also exercising the MUMPS linear-solver path.
+## x* = (1, 2), f* = 0.
 res_ip <- uno_solve(
   n = 2L, lb = c(-Inf, -Inf), ub = c(Inf, Inf), sense = "minimize",
   obj = obj, grad = grad,
