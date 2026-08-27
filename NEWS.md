@@ -1,3 +1,12 @@
+# Uno 2.7.4-1
+
+* Fixed a compilation failure with LLVM 23's libc++, reported by CRAN's
+  `r-devel-linux-x86_64-fedora-clang` check. libc++ 23 dropped many transitive
+  includes in all language modes, so the bundled Uno solver's `VectorView.hpp`
+  no longer saw `<algorithm>` and its use of `std::fill` failed to compile,
+  taking 28 translation units with it. The header now includes `<algorithm>`
+  directly. No user-visible change.
+
 # Uno 2.7.4
 
 * Fixed the interior-point ("ipopt") preset on Windows, which failed with "The
