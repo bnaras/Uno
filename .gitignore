@@ -8,3 +8,7 @@ src/*.o
 src/*.so
 docs/
 pkgdown/
+
+# Submission notes are rewritten for each CRAN submission and are already
+# excluded from the tarball by .Rbuildignore; they are not part of the package.
+cran-comments.md
