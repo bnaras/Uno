@@ -68,7 +68,48 @@ HIGHS_INSTALL_DIR=${R_UNO_PKG_HOME}/src/highslib
 # which left this compile with no R include path -> <R_ext/Error.h> not found.
 R_INCLUDE_DIR=`"${R_HOME}/bin/Rscript" -e 'cat(R.home("include"))'`
 R_HDR_FLAGS="-I${R_INCLUDE_DIR}"
-HIGHS_RIO_FLAGS="-DHIGHS_R_PRINT ${R_HDR_FLAGS}"
+
+# Which stdout-redirection strategy can r_io.h use here?  It needs a way to
+# build a FILE* that forwards to Rprintf: funopen (macOS/BSD), fopencookie
+# (glibc), or -- where neither exists (Windows/MinGW/UCRT, musl) -- the sentinel
+# + wrapped-writer fallback.
+#
+# This is PROBED rather than decided by a platform #ifdef because glibc's guard
+# on fopencookie is version-dependent: __USE_GNU (so it needs _GNU_SOURCE) up to
+# glibc 2.36, __USE_MISC (on by default) from 2.39.  Compounding it, g++/clang++
+# define _GNU_SOURCE automatically for C++ but gcc/clang do NOT for C, so on
+# glibc <= 2.36 the 228 HiGHS C++ TUs compile while the cuPDLP C TUs fail with
+# "unknown type name 'cookie_io_functions_t'" -- the Debian 12 install failure.
+# No preprocessor test separates those cases; asking the compiler does.
+#
+# -Werror=implicit-function-declaration is required: HiGHS's own C flags carry
+# -Wno-implicit-function-declaration, which would otherwise let a probe succeed
+# on a platform where only the type is hidden.
+R_IO_PROBE_DIR=`mktemp -d 2>/dev/null` || R_IO_PROBE_DIR="${R_UNO_PKG_HOME}/.r_io_probe.$$"
+mkdir -p "${R_IO_PROBE_DIR}"
+
+r_io_probe () {   # $1 = probe source, $2 = extra flags; exit 0 if it compiles
+    ${CC} ${CFLAGS} ${R_HDR_FLAGS} $2 -Werror=implicit-function-declaration \
+          -c "$1" -o "${R_IO_PROBE_DIR}/probe.o" > /dev/null 2>&1
+}
+
+R_IO_PROBES="${R_UNO_PKG_HOME}/tools"
+if r_io_probe "${R_IO_PROBES}/r_io_probe_funopen.c" ""; then
+    R_IO_DEFS="-DHIGHS_R_HAVE_FUNOPEN"
+    R_IO_WHICH="funopen"
+elif r_io_probe "${R_IO_PROBES}/r_io_probe_fopencookie.c" ""; then
+    R_IO_DEFS="-DHIGHS_R_HAVE_FOPENCOOKIE"
+    R_IO_WHICH="fopencookie (visible by default)"
+elif r_io_probe "${R_IO_PROBES}/r_io_probe_fopencookie.c" "-D_GNU_SOURCE"; then
+    R_IO_DEFS="-D_GNU_SOURCE -DHIGHS_R_HAVE_FOPENCOOKIE"
+    R_IO_WHICH="fopencookie (requires _GNU_SOURCE)"
+else
+    R_IO_DEFS="-DHIGHS_R_NO_STREAM_REDIRECT"
+    R_IO_WHICH="sentinel + wrapped writers (no funopen, no fopencookie)"
+fi
+rm -rf "${R_IO_PROBE_DIR}"
+
+HIGHS_RIO_FLAGS="-DHIGHS_R_PRINT ${R_IO_DEFS} ${R_HDR_FLAGS}"
 export CFLAGS="${CFLAGS} ${HIGHS_RIO_FLAGS}"
 export CXXFLAGS="${CXXFLAGS} ${HIGHS_RIO_FLAGS}"
 
@@ -84,6 +125,7 @@ echo "CC:               '${CC}'"
 echo "CXX:              '${CXX}'"
 echo "HIGHS_SRC_DIR:    '${HIGHS_SRC_DIR}'"
 echo "HIGHS_INSTALL_DIR:'${HIGHS_INSTALL_DIR}'"
+echo "R console stdout: '${R_IO_WHICH}'"
 echo ""
 
 #
