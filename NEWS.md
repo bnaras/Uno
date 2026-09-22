@@ -1,13 +1,7 @@
 # Uno 2.7.4-2
 
 * Fixed an installation failure on glibc 2.36 and older (Debian 12, Ubuntu
-  22.04 LTS, RHEL 9), where the bundled HiGHS build stopped with "unknown type
-  name `cookie_io_functions_t`" in the cuPDLP C sources. Those releases hide
-  `fopencookie` behind `_GNU_SOURCE`, which C++ compilers define automatically
-  but C compilers do not; glibc 2.39 exposes it by default, which is why CRAN's
-  check machines were unaffected. `configure` now probes for `funopen` /
-  `fopencookie` at build time instead of inferring them from the platform. No
-  user-visible change.
+  22.04 LTS, RHEL 9), where the bundled HiGHS build stopped.
 
 # Uno 2.7.4-1
 
