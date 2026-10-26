@@ -20,3 +20,4 @@ inequality_handling_methods,ineq
 inertia_correction_strategies,inertia
 quasi_newton,qn
 switching_methods,switching
+interior_point_methods,ipm

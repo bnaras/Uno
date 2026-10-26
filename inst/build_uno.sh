@@ -129,10 +129,10 @@ fi
 
 #
 # Optional MUMPS via rmumps: if MUMPS_R_INCLUDE_DIRS is exported (by ./configure,
-# pointing at the rmumps package's include dir), enable Uno's MUMPS linear solver
-# in HEADER-ONLY mode -- compile MUMPSSolver.cpp against rmumps' headers and link
-# NO MUMPS/METIS/MPI/OpenMP library. dmumps_c is resolved at runtime via
-# R_FindSymbol from rmumps (see interfaces/R/src/dmumps_shim.c).
+# pointing at the directory of rmumps' dmumps_c.h), enable Uno's MUMPS linear
+# solver in HEADER-ONLY mode -- compile MUMPSSolver.cpp against rmumps' headers
+# and link NO MUMPS/METIS/MPI/OpenMP library. dmumps_c is bound at load time to
+# the C-callables rmumps registers (see src/dmumps_shim.c).
 #
 MUMPS_OPTS=""
 if test -n "${MUMPS_R_INCLUDE_DIRS}"; then
@@ -146,11 +146,15 @@ fi
 mkdir -p "${UNO_BUILD_DIR}"
 cd "${UNO_BUILD_DIR}"
 
+# USE_OPENMP: ON by default since Uno 2.7.5, and Uno's CMake then requires
+# OpenMP whenever MUMPS is found; the R build is sequential (no OpenMP in R's
+# toolchain on macOS, and CRAN limits installs to two cores), so turn it off.
 CMAKE_OPTS="
     -DCMAKE_BUILD_TYPE=Release
     -DBUILD_STATIC_LIBS:bool=ON
     -DBUILD_SHARED_LIBS:bool=OFF
     -DENABLE_TESTS:bool=OFF
+    -DUSE_OPENMP:bool=OFF
     -DCMAKE_POSITION_INDEPENDENT_CODE:bool=ON
     -DCMAKE_INSTALL_PREFIX=${UNO_INSTALL_DIR}
     -DCMAKE_VERBOSE_MAKEFILE:bool=ON
