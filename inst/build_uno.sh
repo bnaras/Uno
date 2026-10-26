@@ -44,15 +44,15 @@ fi
 # that will dlopen the package .so)
 #
 # Use R's toolchain throughout: R's compiler AND R's flags. CMake reads
-# CFLAGS/CXXFLAGS/FFLAGS/LDFLAGS from the environment at first configure.
+# CFLAGS/CXXFLAGS/LDFLAGS from the environment at first configure.
 # R's CPPFLAGS is folded into C/CXX flags (CMake has no CPPFLAGS concept).
+# No Fortran compiler is exported: the Uno build below is configured with
+# FORTRAN_MANGLING_UNDERSCORE, so CMake never probes one (see CMAKE_OPTS).
 CFLAGS=`"${R_HOME}/bin/R" CMD config CFLAGS`
 CXXFLAGS=`"${R_HOME}/bin/R" CMD config CXXFLAGS`
 CPPFLAGS=`"${R_HOME}/bin/R" CMD config CPPFLAGS`
 export CC=`"${R_HOME}/bin/R" CMD config CC`
 export CXX=`"${R_HOME}/bin/R" CMD config CXX17`
-export FC=`"${R_HOME}/bin/R" CMD config FC`
-export FFLAGS=`"${R_HOME}/bin/R" CMD config FFLAGS`
 export CFLAGS="${CFLAGS} ${CPPFLAGS}"
 export CXXFLAGS="${CXXFLAGS} ${CPPFLAGS}"
 export LDFLAGS=`"${R_HOME}/bin/R" CMD config LDFLAGS`
@@ -85,7 +85,6 @@ echo ""
 echo "CMAKE VERSION:  '`${CMAKE_EXE} --version | head -n 1`'"
 echo "CC:             '${CC}'"
 echo "CXX:            '${CXX}'"
-echo "FC:             '${FC}'"
 echo "UNO_SRC_DIR:    '${UNO_SRC_DIR}'"
 echo "UNO_BUILD_DIR:  '${UNO_BUILD_DIR}'"
 echo "UNO_INSTALL_DIR:'${UNO_INSTALL_DIR}'"
@@ -149,12 +148,22 @@ cd "${UNO_BUILD_DIR}"
 # USE_OPENMP: ON by default since Uno 2.7.5, and Uno's CMake then requires
 # OpenMP whenever MUMPS is found; the R build is sequential (no OpenMP in R's
 # toolchain on macOS, and CRAN limits installs to two cores), so turn it off.
+#
+# FORTRAN_MANGLING_UNDERSCORE: Uno's CMake otherwise compiles and links a
+# Fortran probe just to learn how BLAS/LAPACK symbols are spelled. Nothing in
+# this build is Fortran; the archive's BLAS/LAPACK/Fortran-runtime externals
+# are resolved by Makevars against R's $(BLAS_LIBS) $(LAPACK_LIBS) $(FLIBS),
+# which use the gfortran convention (lowercase, trailing underscore) on every
+# platform R supports. Assuming it keeps the build independent of a working
+# Fortran link step (GitHub's macos-26 image of 2026-10 pairs Command Line
+# Tools 27's SDK with an older Xcode linker, and gfortran cannot link there).
 CMAKE_OPTS="
     -DCMAKE_BUILD_TYPE=Release
     -DBUILD_STATIC_LIBS:bool=ON
     -DBUILD_SHARED_LIBS:bool=OFF
     -DENABLE_TESTS:bool=OFF
     -DUSE_OPENMP:bool=OFF
+    -DFORTRAN_MANGLING_UNDERSCORE:bool=ON
     -DCMAKE_POSITION_INDEPENDENT_CODE:bool=ON
     -DCMAKE_INSTALL_PREFIX=${UNO_INSTALL_DIR}
     -DCMAKE_VERBOSE_MAKEFILE:bool=ON

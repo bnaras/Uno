@@ -27,6 +27,12 @@
 
 * Build: Uno is configured with `-DUSE_OPENMP=OFF` (Uno 2.7.5 made OpenMP the
   default, which its CMake requires whenever MUMPS is present). The bundled
+  Uno's CMake gains a `FORTRAN_MANGLING_UNDERSCORE` option, which the package
+  turns on: BLAS/LAPACK symbol names are spelled with the gfortran convention
+  R uses everywhere instead of being discovered by compiling and linking a
+  Fortran probe, so installing no longer needs a working Fortran link step
+  (nothing in the build is Fortran; R supplies BLAS, LAPACK and the Fortran
+  runtime at link time). The bundled
   Uno's `DynamicLoader.cpp` includes `<cstdlib>` for `std::getenv`, which
   LLVM 23's libc++ no longer provides transitively (CRAN's
   `r-devel-linux-x86_64-fedora-clang`); the 2.7.4-1 fix of `VectorView.hpp` is
