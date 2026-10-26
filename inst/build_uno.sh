@@ -145,6 +145,32 @@ fi
 mkdir -p "${UNO_BUILD_DIR}"
 cd "${UNO_BUILD_DIR}"
 
+# BLAS/LAPACK: Uno's CMake insists on locating them (find_package REQUIRED)
+# unless BLAS_LIBRARIES / LAPACK_LIBRARIES are given. The static archive built
+# here links nothing; the BLAS/LAPACK externals are resolved by Makevars
+# against R's $(BLAS_LIBS) $(LAPACK_LIBS). So hand CMake R's own -l entries
+# (the -L directories are not needed for an archive) and skip the discovery,
+# which is fragile: without a Fortran compiler enabled, FindBLAS cannot link
+# Rtools' static OpenBLAS on Windows and the configure stops.
+r_link_names() {
+    # keep "-lname" tokens and absolute library paths; join with ';' for CMake
+    out=""
+    for tok in "$@"; do
+        case "${tok}" in
+            -l*|/*) out="${out}${out:+;}${tok}" ;;
+        esac
+    done
+    echo "${out}"
+}
+UNO_BLAS_LIBRARIES=`r_link_names \`"${R_HOME}/bin/R" CMD config BLAS_LIBS\``
+UNO_LAPACK_LIBRARIES=`r_link_names \`"${R_HOME}/bin/R" CMD config LAPACK_LIBS\``
+# an R without explicit flags (external BLAS resolved by the linker): any
+# non-empty value disables the discovery, and nothing is linked here anyway.
+test -n "${UNO_BLAS_LIBRARIES}"   || UNO_BLAS_LIBRARIES="-lblas"
+test -n "${UNO_LAPACK_LIBRARIES}" || UNO_LAPACK_LIBRARIES="-llapack"
+echo "BLAS_LIBRARIES (to Uno's CMake):   '${UNO_BLAS_LIBRARIES}'"
+echo "LAPACK_LIBRARIES (to Uno's CMake): '${UNO_LAPACK_LIBRARIES}'"
+
 # USE_OPENMP: ON by default since Uno 2.7.5, and Uno's CMake then requires
 # OpenMP whenever MUMPS is found; the R build is sequential (no OpenMP in R's
 # toolchain on macOS, and CRAN limits installs to two cores), so turn it off.
@@ -164,6 +190,8 @@ CMAKE_OPTS="
     -DENABLE_TESTS:bool=OFF
     -DUSE_OPENMP:bool=OFF
     -DFORTRAN_MANGLING_UNDERSCORE:bool=ON
+    -DBLAS_LIBRARIES=\"${UNO_BLAS_LIBRARIES}\"
+    -DLAPACK_LIBRARIES=\"${UNO_LAPACK_LIBRARIES}\"
     -DCMAKE_POSITION_INDEPENDENT_CODE:bool=ON
     -DCMAKE_INSTALL_PREFIX=${UNO_INSTALL_DIR}
     -DCMAKE_VERBOSE_MAKEFILE:bool=ON
