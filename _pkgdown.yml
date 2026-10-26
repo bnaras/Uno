@@ -16,7 +16,13 @@ reference:
   desc: Solve a nonlinear program with Uno.
   contents:
   - uno_solve
+- title: Options and statuses
+  desc: Solver options and the termination statuses uno_solve can report.
+  contents:
+  - uno_options
+  - uno_status_labels
 - title: Package
   contents:
   - Uno-package
   - uno_version
+  - uno_mumps_version
