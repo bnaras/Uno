@@ -25,6 +25,12 @@
   preset; without a `log_callback`, Uno's output now goes to the R console
   through an explicit logger sink.
 
+* Fixed `log_callback`, which received Uno's preamble twice and never the
+  iteration table or the final summary: Uno's stream buffer expects the
+  callback to return the number of bytes it consumed, and the binding returned
+  0, which Uno treats as a failed flush. The callback now receives the whole
+  log, once.
+
 * Build: Uno is configured with `-DUSE_OPENMP=OFF` (Uno 2.7.5 made OpenMP the
   default, which its CMake requires whenever MUMPS is present). The bundled
   Uno's CMake gains a `FORTRAN_MANGLING_UNDERSCORE` option, which the package
@@ -32,7 +38,10 @@
   R uses everywhere instead of being discovered by compiling and linking a
   Fortran probe, so installing no longer needs a working Fortran link step
   (nothing in the build is Fortran; R supplies BLAS, LAPACK and the Fortran
-  runtime at link time). The bundled
+  runtime at link time). For the same reason R's BLAS and LAPACK link names
+  are handed to Uno's CMake directly instead of letting it search for
+  libraries the archive never links (the search failed on Rtools without a
+  Fortran compiler). The bundled
   Uno's `DynamicLoader.cpp` includes `<cstdlib>` for `std::getenv`, which
   LLVM 23's libc++ no longer provides transitively (CRAN's
   `r-devel-linux-x86_64-fedora-clang`); the 2.7.4-1 fix of `VectorView.hpp` is

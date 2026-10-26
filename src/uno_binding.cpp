@@ -215,6 +215,13 @@ uno_int termination_trampoline(uno_int /*n*/, uno_int /*m*/, const double* /*pri
 // C5: logger stream callback. Forwards each Uno output buffer to the R `log`
 // closure as a single string. Errors are swallowed (never propagate through
 // Uno's C++ output path). user_data carries the RCallbacks.
+//
+// Return value: the number of bytes consumed, which must equal `length`.
+// Uno_C_API.cpp's CStreamBuffer::flush_buffer() treats anything else as a
+// failed flush: it leaves the bytes in its buffer (so the next flush sends
+// them again) and returns EOF from overflow(), which sets badbit on the
+// stream and silently drops the rest of the solve's output. (The header does
+// not document the return value; the implementation requires `length`.)
 uno_int logger_trampoline(const char* buffer, uno_int length, void* user_data) {
   RCallbacks* cb = static_cast<RCallbacks*>(user_data);
   SEXP txt = PROTECT(Rf_ScalarString(
@@ -223,7 +230,7 @@ uno_int logger_trampoline(const char* buffer, uno_int length, void* user_data) {
   int err = 0;
   R_tryEval(call, R_GlobalEnv, &err);
   UNPROTECT(2);
-  return 0;
+  return length;
 }
 
 // Default logger sink: Uno's output goes to R's console. Installed for every
@@ -233,7 +240,7 @@ uno_int logger_trampoline(const char* buffer, uno_int length, void* user_data) {
 // its remaining raw prints through the Logger).
 uno_int rprintf_logger_trampoline(const char* buffer, uno_int length, void* /*user_data*/) {
   Rprintf("%.*s", static_cast<int>(length), buffer);
-  return 0;
+  return length;   // bytes consumed; see logger_trampoline
 }
 
 // Copy a cpp11::integers into a contiguous uno_int (int32) buffer.

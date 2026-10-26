@@ -137,6 +137,39 @@ expect_equal(res_ip$solution_status, c(FEASIBLE_KKT_POINT = 1L))
 expect_equal(res_ip$objective, 0, tolerance = 1e-6)
 expect_equal(res_ip$primal, c(1, 2), tolerance = 1e-5)
 
+## @unopy NONE (reference: interfaces/Julia/test/check_auto_preset.jl, Uno 2.9.2)
+## preset = "auto" (Uno 2.9.0, usable through the C API since 2.9.2): Uno picks
+## the preset from the model size, uno/options/Presets.cpp pick_auto_preset():
+## n + m >= 2000 or more than 50,000 Jacobian + Hessian nonzeros -> "ipopt",
+## otherwise "filtersqp". The Julia test checks the choice through the method
+## description ("SQP" for HS015); the R binding does not expose it, so the
+## choice is read off Uno's log: the active-set branch allocates an
+## "inequality-constrained (LP or QP) method" run by HiGHS, the barrier branch
+## a "barrier method" run by MUMPS. (These strings are Uno's log text; update
+## them with the bundled Uno if it rewords them.) The convex smoke problem is
+## used because HS015 under the auto-selected filtersqp needs BQPD: in this
+## HiGHS-only build it ends in ALGORITHMIC_ERROR on the indefinite subproblem.
+auto_log <- character()
+res_auto <- uno_solve(
+  n = 2L, lb = c(-Inf, -Inf), ub = c(Inf, Inf), sense = "minimize",
+  obj = obj, grad = grad,
+  m = 1L, cl = -Inf, cu = 10, cons = cons,
+  jac_rows = c(0L, 0L), jac_cols = c(0L, 1L), jac = jac,
+  hess_rows = c(0L, 1L), hess_cols = c(0L, 1L), hess = hess,
+  x0 = c(0, 0), preset = "auto", base_indexing = 0L, verbose = FALSE,
+  log_callback = function(s) { auto_log <<- c(auto_log, s); invisible(NULL) }
+)
+expect_equal(res_auto$optimization_status, c(SUCCESS = 0L))
+expect_equal(res_auto$solution_status, c(FEASIBLE_KKT_POINT = 1L))
+expect_equal(res_auto$objective, 0, tolerance = 1e-6)
+expect_equal(res_auto$primal, c(1, 2), tolerance = 1e-5)
+auto_text <- paste(auto_log, collapse = "")
+expect_true(grepl("preset = auto", auto_text, fixed = TRUE))
+expect_true(grepl("Optimization status:", auto_text, fixed = TRUE))   # log complete
+expect_true(grepl("inequality-constrained (LP or QP) method", auto_text, fixed = TRUE))
+expect_true(grepl("Running HiGHS", auto_text, fixed = TRUE))
+expect_false(grepl("barrier method", auto_text, fixed = TRUE))
+
 ## @unopy example_hs015.py (run 3: ipopt preset, MUMPS linear solver)
 ## HS015 (Hock-Schittkowski #15) -- the canonical unopy reference problem:
 ##   min  100*(x2 - x1^2)^2 + (1 - x1)^2
@@ -193,12 +226,16 @@ expect_error(uno_solve(
   x0 = c(-2, 1), preset = "ipopt", base_indexing = 0L, verbose = FALSE,
   name = c("a", "b")
 ), "single string")
-## duals are returned for both constraints and both bounds (HS015 has an active
-## constraint and an active upper bound); the example prints but does not assert
-## their values, so we only check they are present and finite.
+## duals at the HS015 optimum. The example prints but does not assert them; the
+## reference values are those of Uno's Julia test (interfaces/Julia/test/
+## check_auto_preset.jl, 2.9.2): 700 for the active constraint x1*x2 >= 1, 0 for
+## the inactive x1 + x2^2 >= 0, -1751 for the active upper bound x1 <= 0.5, with
+## the default lagrangian_sign = "negative" (L = sigma*f - y^T c). The lower
+## bounds are -Inf, so their multipliers are 0.
 expect_equal(length(res_hs015$constraint_dual), 2L)
-expect_true(all(is.finite(res_hs015$lower_bound_dual)))
-expect_true(all(is.finite(res_hs015$upper_bound_dual)))
+expect_equal(res_hs015$constraint_dual, c(700, 0), tolerance = 1e-4)
+expect_equal(res_hs015$lower_bound_dual, c(0, 0), tolerance = 1e-4)
+expect_equal(res_hs015$upper_bound_dual, c(-1751, 0), tolerance = 1e-4)
 
 ## the diagnostic / performance fields the example prints are all exposed and
 ## populated: cpu_time plus the per-callback evaluation counters, the iteration
@@ -258,6 +295,10 @@ res_pos <- uno_solve(
 expect_equal(res_pos$optimization_status, c(SUCCESS = 0L))
 expect_equal(res_pos$objective, 306.5, tolerance = 1e-4)
 expect_equal(res_pos$primal, c(0.5, 2.0), tolerance = 1e-4)
+## the multipliers come back in the convention the caller declared: the signs
+## of the default-"negative" run above are flipped, the magnitudes are the same.
+expect_equal(res_pos$constraint_dual, c(-700, 0), tolerance = 1e-4)
+expect_equal(res_pos$upper_bound_dual, c(1751, 0), tolerance = 1e-4)
 
 ## @unopy NONE
 ## C4: iter_callback fires per acceptable iterate with iterate info; returning
@@ -339,3 +380,12 @@ res_log <- uno_solve(
 )
 expect_true(length(log_chunks) >= 1L)
 expect_true(is.character(unlist(log_chunks)))
+## the whole log arrives, exactly once. Uno's stream buffer treats a callback
+## return value other than the chunk length as a failed flush: it re-sends the
+## chunk at the next flush and drops everything after it (badbit). Before
+## 2.9.2-1 the binding returned 0, so a log_callback saw the preamble twice and
+## never the iteration table or the final summary.
+log_text <- paste(unlist(log_chunks), collapse = "")
+expect_equal(lengths(regmatches(log_text, gregexpr("User options:", log_text, fixed = TRUE))), 1L)
+expect_true(grepl("Optimization status:", log_text, fixed = TRUE))   # the summary at the end
+expect_true(grepl("Iterations:", log_text, fixed = TRUE))
