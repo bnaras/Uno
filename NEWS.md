@@ -26,7 +26,11 @@
   through an explicit logger sink.
 
 * Build: Uno is configured with `-DUSE_OPENMP=OFF` (Uno 2.7.5 made OpenMP the
-  default, which its CMake requires whenever MUMPS is present).
+  default, which its CMake requires whenever MUMPS is present). The bundled
+  Uno's `DynamicLoader.cpp` includes `<cstdlib>` for `std::getenv`, which
+  LLVM 23's libc++ no longer provides transitively (CRAN's
+  `r-devel-linux-x86_64-fedora-clang`); the 2.7.4-1 fix of `VectorView.hpp` is
+  moot, that file is gone upstream.
 
 * Fixed an installation failure on glibc 2.36 and older (Debian 12, Ubuntu
   22.04 LTS, RHEL 9), where the bundled HiGHS build stopped.
