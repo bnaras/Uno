@@ -2,6 +2,8 @@
 
 ## Uno 2.7.4
 
+CRAN release: 2026-06-17
+
 - Fixed the interior-point (“ipopt”) preset on Windows, which failed
   with “The linear solver MUMPS is unknown”. The shim now resolves
   rmumps’ `dmumps_c` via `R_GetCCallable` (works on Windows) instead of
