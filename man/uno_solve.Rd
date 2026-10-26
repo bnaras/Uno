@@ -29,7 +29,8 @@ uno_solve(
   lagrangian_sign = c("negative", "positive"),
   dual0 = NULL,
   iter_callback = NULL,
-  log_callback = NULL
+  log_callback = NULL,
+  name = NULL
 )
 }
 \arguments{
@@ -67,9 +68,10 @@ point, using MUMPS as the linear solver).}
 \item{verbose}{if `FALSE`, suppress Uno's solution printout.}
 
 \item{options}{a named list of Uno solver options applied AFTER the preset
-(so they override it), e.g. `list(max_iterations = 200L, tolerance = 1e-8,
-linear_solver = "MUMPS")`. Each value is coerced to the option's declared
-Uno type; an unknown option name or an unacceptable value raises an error.}
+(so they override it), e.g. `list(max_iterations = 200L,
+primal_tolerance = 1e-8, linear_solver = "MUMPS")`; [uno_options()] lists
+them. Each value is coerced to the option's declared Uno type; an unknown
+option name or an unacceptable value raises an error.}
 
 \item{lagrangian_sign}{the Lagrangian multiplier sign convention the `hess`
 callback uses: `"positive"` for \eqn{L = \sigma f + y^\top c} (the standard
@@ -89,18 +91,34 @@ with `primals`, `lower_bound_dual`, `upper_bound_dual`, `constraint_dual`,
 as "do not terminate". `NULL` disables it.}
 
 \item{log_callback}{optional `function(text)` that receives Uno's output
-stream in chunks (a sink for the solver log); `NULL` leaves output on
-stdout. Independent of `verbose` (which controls how much Uno prints).}
+stream in chunks (a sink for the solver log); `NULL` sends Uno's output to
+the R console. Independent of `verbose` (which controls how much Uno
+prints).}
+
+\item{name}{optional model name (a string) shown in Uno's log; `NULL` for
+Uno's default.}
 }
 \value{
 a named list. The `optimization_status` and `solution_status` are
   **named integers** of the form `c(SUCCESS = 0L)`: the value is Uno's enum
   code and the name is its canonical label, so you can key a status map by
-  `names(status)` and still read the code (e.g. `status[[1L]]`). The list
-  also holds the objective, primal and dual solutions (`constraint_dual`,
+  `names(status)` and still read the code (e.g. `status[[1L]]`). The labels
+  are those of Uno's C API (see [uno_status_labels()]). The list also holds
+  the objective, primal and dual solutions (`constraint_dual`,
   `lower_bound_dual`, `upper_bound_dual`), KKT residuals, and per-callback
   evaluation counters.
 }
 \description{
 Solve a nonlinear program with Uno
 }
+\section{Interrupting a solve}{
+
+  Uno installs its own `SIGINT` handler for the duration of a solve: a
+  Ctrl-C stops the solve cleanly at the next iteration with
+  `optimization_status` `USER_INTERRUPTION`, and R's handler is restored
+  afterwards. Uno resets `SIGINT` to the default action after the first
+  Ctrl-C, so a second Ctrl-C before the solve returns terminates the R
+  process. An interrupt that arrives inside a MUMPS factorization is caught
+  by \pkg{rmumps} (version 5.2.1-44 or later) and reported the same way.
+}
+

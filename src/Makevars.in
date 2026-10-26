@@ -1,7 +1,9 @@
 CXX_STD = CXX17
 
-# Uno C API headers live under <unolib>/include/uno/.
-PKG_CPPFLAGS = -I@RUNO_LIB_DIR@/include
+# Uno C API headers live under <unolib>/include/uno/. The MUMPS flag selects
+# how src/dmumps_shim.c binds to rmumps (-DUNO_RMUMPS_API, empty for the legacy
+# dmumps_c, or -DUNO_R_NO_MUMPS); set by ./configure.
+PKG_CPPFLAGS = -I@RUNO_LIB_DIR@/include @RUNO_MUMPS_CPPFLAGS@
 
 # Link the Uno static archive; its BLAS/LAPACK/Fortran-runtime externals are
 # resolved here against R's own libraries.

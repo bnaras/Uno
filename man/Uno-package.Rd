@@ -10,21 +10,30 @@ R bindings to \href{https://github.com/cvanaret/Uno}{Uno} (Unifying Nonlinear
 Optimization), a C++ solver for nonlinearly constrained optimization, via
 Uno's C API. The HiGHS QP/LP subproblem solver is built from source for the
 SQP presets; the MUMPS linear solver used by the interior-point preset is
-reached at runtime through the \pkg{rmumps} package. Intended as a nonlinear
-(DNLP) backend for \pkg{CVXR}; this is the R analog of the \code{unopy}
-Python package.
+reached at run time through the \pkg{rmumps} package (bound when the
+namespace loads; see \code{\link{uno_mumps_version}}). Intended as a
+nonlinear (DNLP) backend for \pkg{CVXR}; this is the R analog of the
+\code{unopy} Python package.
 }
 \seealso{
 \code{\link{uno_solve}} to solve a nonlinear program,
-  \code{\link{uno_version}} for the linked Uno version.
+  \code{\link{uno_version}} for the linked Uno version,
+  \code{\link{uno_options}} and \code{\link{uno_status_labels}} for what the
+  linked Uno accepts and returns.
 }
 \author{
 \strong{Maintainer}: Balasubramanian Narasimhan \email{naras@stanford.edu}
 
 Authors:
 \itemize{
+  \item Balasubramanian Narasimhan \email{naras@stanford.edu}
   \item Charlie Vanaret (Designed and implemented Uno) [copyright holder]
   \item Sven Leyffer (Co-developed the Uno framework) [copyright holder]
+}
+
+Other contributors:
+\itemize{
+  \item HiGHS development team (Bundled HiGHS LP/QP/MIP solver (MIT); see inst/COPYRIGHTS) [copyright holder]
 }
 
 }

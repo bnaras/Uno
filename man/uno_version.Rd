@@ -4,7 +4,7 @@
 \alias{uno_version}
 \title{Linked Uno version}
 \value{
-A character scalar, e.g. \code{"2.7.2"}.
+A character scalar, e.g. \code{"2.9.2"}.
 }
 \description{
 Returns the version string of the Uno C++ library this package is built

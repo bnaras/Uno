@@ -4,6 +4,7 @@
 ^src/highslib$
 ^src/Makevars$
 ^src/Makevars\.win$
+^src/uno_status_names\.h$
 ^.*\.o$
 ^.*\.so$
 ^\.gitignore$

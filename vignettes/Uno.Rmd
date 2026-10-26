@@ -34,8 +34,9 @@ Two solver paths are available, selected with the `preset` argument:
 
 * **`ipopt`** — an interior-point method whose symmetric-indefinite KKT systems
   are factored by **MUMPS**, reached at run time through the
-  [rmumps](https://cran.r-project.org/package=rmumps) package. It handles
-  indefiniteness (nonconvex problems) through inertia correction.
+  [rmumps](https://cran.r-project.org/package=rmumps) package
+  (`uno_mumps_version()` reports which MUMPS). It handles indefiniteness
+  (nonconvex problems) through inertia correction.
 * **`filtersqp`** — a filter SQP method whose QP subproblems are solved by
   **HiGHS** (built from source with this package). HiGHS solves *convex* QPs, so
   this preset is the right choice for convex problems.
@@ -448,9 +449,9 @@ Any Uno option can be passed through `options`; values are coerced to the
 option's declared type and applied after the preset:
 
 ```{r options, eval = FALSE}
-# cap the iteration count and tighten the tolerance
+# cap the iteration count and tighten the primal tolerance
 uno_solve(..., preset = "ipopt",
-          options = list(max_iterations = 200L, tolerance = 1e-8))
+          options = list(max_iterations = 200L, primal_tolerance = 1e-8))
 
 # pick the linear solver explicitly, and silence output
 uno_solve(..., preset = "ipopt",
@@ -458,7 +459,12 @@ uno_solve(..., preset = "ipopt",
 ```
 
 An unknown option name, or a value the option rejects, raises an error rather
-than being silently ignored.
+than being silently ignored. `uno_options()` lists every option of the linked
+Uno with its declared type:
+
+```{r option-list}
+head(uno_options(), 8)
+```
 
 ## Monitoring and early termination
 

@@ -1,6 +1,6 @@
 #!/bin/sh
 
 rm -f src/*.o src/*.so
-rm -f src/Makevars src/Makevars.win
+rm -f src/Makevars src/Makevars.win src/uno_status_names.h
 rm -rf src/unolib src/highslib
 rm -rf uno_build highs_build

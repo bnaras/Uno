@@ -4,6 +4,7 @@ src/unolib/
 src/highslib/
 src/Makevars
 src/Makevars.win
+src/uno_status_names.h
 src/*.o
 src/*.so
 docs/

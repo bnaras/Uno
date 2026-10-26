@@ -13,21 +13,41 @@ if test -z "${R_HOME}"; then
     exit 1
 fi
 
-# Locate the MUMPS C-API headers shipped by the 'rmumps' package. build_uno.sh
-# compiles Uno's MUMPSSolver.cpp against these (header-only); we link NO MUMPS
-# library -- the single dmumps_c entry point is resolved at runtime from rmumps
-# via R_GetCCallable (see src/dmumps_shim.c). This enables the interior-point
-# (e.g. "ipopt") preset. Skip with R_UNO_NO_MUMPS=1 (filtersqp/HiGHS only).
+# Locate the MUMPS C API headers of the 'rmumps' package. build_uno.sh compiles
+# Uno's MUMPSSolver.cpp against them (header-only; NO MUMPS library is linked):
+# the dmumps_c entry point is bound at load time by src/dmumps_shim.c to the
+# C-callables rmumps registers. Two generations of rmumps are supported:
+#   * rmumps >= 5.2.1-44 installs <rmumps/rmumps_api.h> (-DUNO_RMUMPS_API): the
+#     shim uses the entry points named after the DMUMPS_STRUC_C layout it was
+#     compiled against (RMUMPS_DMUMPS_ABI), so a layout mismatch is a clean
+#     load-time error; rmumps 5.9.1-1 brings MUMPS 5.9.1 this way;
+#   * rmumps <= 5.2.1-43 has only the top-level dmumps_c.h: the legacy "dmumps_c"
+#     callable and the MUMPS 5.2.1 layout.
+# This enables the interior-point ("ipopt") preset. Skip with R_UNO_NO_MUMPS=1
+# (filtersqp/HiGHS only; -DUNO_R_NO_MUMPS tells the shim).
+RUNO_MUMPS_CPPFLAGS="-DUNO_R_NO_MUMPS"
 if test -z "${R_UNO_NO_MUMPS}"; then
     RMUMPS_INC=`"${R_HOME}/bin/Rscript" -e 'cat(system.file("include", package="rmumps"))'`
-    if test -z "${RMUMPS_INC}" || test ! -f "${RMUMPS_INC}/dmumps_c.h"; then
+    if test -n "${RMUMPS_INC}" && test -f "${RMUMPS_INC}/rmumps/rmumps_api.h"; then
+        export MUMPS_R_INCLUDE_DIRS="${RMUMPS_INC}/rmumps"
+        RUNO_MUMPS_CPPFLAGS="-DUNO_RMUMPS_API"
+        echo "MUMPS headers (rmumps, versioned C interface): ${MUMPS_R_INCLUDE_DIRS}"
+    elif test -n "${RMUMPS_INC}" && test -f "${RMUMPS_INC}/dmumps_c.h"; then
+        export MUMPS_R_INCLUDE_DIRS="${RMUMPS_INC}"
+        RUNO_MUMPS_CPPFLAGS=""
+        echo "MUMPS headers (rmumps, legacy dmumps_c): ${MUMPS_R_INCLUDE_DIRS}"
+    else
         echo "rmumps headers not found (looked in '${RMUMPS_INC}')."
-        echo "Install 'rmumps' (>= 5.2.1-41), or set R_UNO_NO_MUMPS=1 to build without MUMPS."
+        echo "Install 'rmumps' (>= 5.2.1-43), or set R_UNO_NO_MUMPS=1 to build without MUMPS."
         exit 1
     fi
-    export MUMPS_R_INCLUDE_DIRS="${RMUMPS_INC}"
-    echo "MUMPS headers (rmumps): ${MUMPS_R_INCLUDE_DIRS}"
 fi
+
+# Generate src/uno_status_names.h from the bundled C API header, so the status
+# labels the binding returns follow Uno's enums (tools/gen_status_table.R).
+"${R_HOME}/bin/Rscript" tools/gen_status_table.R \
+    inst/uno/interfaces/C/Uno_C_API.h src/uno_status_names.h \
+    || { echo "Generating src/uno_status_names.h failed!"; exit 1; }
 
 # Build the HiGHS QP/LP subproblem solver (static libhighs.a) from source.
 # This enables Uno's SQP presets (e.g. filtersqp). Skip with R_UNO_NO_HIGHS=1.
@@ -88,6 +108,7 @@ RUNO_PKG_LIBS="-L${R_UNO_LIB_DIR}/lib -luno ${HIGHS_PKG_LIBS}"
 
 sed -e "s|@RUNO_LIB_DIR@|${R_UNO_LIB_DIR}|g" \
     -e "s|@RUNO_PKG_LIBS@|${RUNO_PKG_LIBS}|g" \
+    -e "s|@RUNO_MUMPS_CPPFLAGS@|${RUNO_MUMPS_CPPFLAGS}|g" \
     src/Makevars.in > src/Makevars
 
 if [ -z "$(ls ${R_UNO_LIB_DIR} 2>/dev/null | grep 'include')" ]; then

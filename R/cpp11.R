@@ -4,6 +4,18 @@ uno_version <- function() {
   .Call(`_Uno_uno_version`)
 }
 
-uno_solve_impl <- function(n, lb, ub, sense, obj, grad, m, cl, cu, cons, jac_rows, jac_cols, jac, hess_rows, hess_cols, hess, x0, preset, base_indexing, verbose, options, lagrangian_sign, dual0, iter_callback, log_callback) {
-  .Call(`_Uno_uno_solve_impl`, n, lb, ub, sense, obj, grad, m, cl, cu, cons, jac_rows, jac_cols, jac, hess_rows, hess_cols, hess, x0, preset, base_indexing, verbose, options, lagrangian_sign, dual0, iter_callback, log_callback)
+uno_solve_impl <- function(n, lb, ub, sense, obj, grad, m, cl, cu, cons, jac_rows, jac_cols, jac, hess_rows, hess_cols, hess, x0, preset, base_indexing, verbose, options, lagrangian_sign, dual0, iter_callback, log_callback, name) {
+  .Call(`_Uno_uno_solve_impl`, n, lb, ub, sense, obj, grad, m, cl, cu, cons, jac_rows, jac_cols, jac, hess_rows, hess_cols, hess, x0, preset, base_indexing, verbose, options, lagrangian_sign, dual0, iter_callback, log_callback, name)
+}
+
+uno_rmumps_load <- function() {
+  .Call(`_Uno_uno_rmumps_load`)
+}
+
+uno_status_labels_impl <- function() {
+  .Call(`_Uno_uno_status_labels_impl`)
+}
+
+uno_options_impl <- function() {
+  .Call(`_Uno_uno_options_impl`)
 }

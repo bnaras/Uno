@@ -63,11 +63,11 @@ Boost Software License 1.0); none is copyleft.
 Components NOT bundled
 ----------------------
 
-MUMPS is NOT included in this package. The interior-point preset reaches the
-MUMPS 'dmumps_c' entry point at run time through the separately installed
-'rmumps' package (via R_FindSymbol; see src/dmumps_shim.c). 'rmumps' is licensed
+MUMPS is NOT included in this package. The interior-point preset reaches MUMPS
+at run time through the separately installed 'rmumps' package, via the
+C-callables rmumps registers (see src/dmumps_shim.c). 'rmumps' is licensed
 GPL (>= 2); no MUMPS source is distributed here, and the package compiles only
-against rmumps's C-API header. Builds without MUMPS (HiGHS-only) are supported.
+against rmumps's C API headers. Builds without MUMPS (HiGHS-only) are supported.
 
 BQPD, an SQP subproblem solver that Uno can optionally use, is NOT bundled,
 owing to its restrictive license.

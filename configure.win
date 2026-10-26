@@ -3,13 +3,12 @@
 # configure.win -- Windows build of the Uno R package (Rtools/MinGW).
 #
 # Mirrors ./configure (writing src/Makevars.win), MUMPS included.  The
-# interior-point ("ipopt") preset reaches MUMPS at runtime from the 'rmumps'
-# package; src/dmumps_shim.c resolves dmumps_c via R_GetCCallable("rmumps",
-# "dmumps_c"), the C-callable rmumps registers (>= 5.2.1-43).  That registry
-# works on Windows, unlike the old R_FindSymbol route (a Windows DLL exports
-# only symbols it explicitly declares, and rmumps does not export dmumps_c as a
-# dynamic symbol).  So the Windows build now enables the same MUMPS path as
-# Linux/macOS, and the ipopt/MUMPS tinytests run here too.
+# interior-point ("ipopt") preset reaches MUMPS at run time from the 'rmumps'
+# package; src/dmumps_shim.c binds dmumps_c to the C-callables rmumps registers
+# (R_GetCCallable), which resolve on Windows too, unlike the old R_FindSymbol
+# route (a Windows DLL exports only symbols it explicitly declares).  So the
+# Windows build enables the same MUMPS path as Linux/macOS, and the ipopt/MUMPS
+# tinytests run here too.
 
 R_UNO_PKG_HOME=`pwd`
 
@@ -19,21 +18,32 @@ if test -z "${R_HOME}"; then
     exit 1
 fi
 
-# Locate the MUMPS C-API headers shipped by the 'rmumps' package (mirrors
-# ./configure). build_uno.sh compiles Uno's MUMPSSolver.cpp against these
-# (header-only); we link NO MUMPS library -- dmumps_c is resolved at runtime
-# from rmumps via R_GetCCallable (see src/dmumps_shim.c). This enables the
-# interior-point ("ipopt") preset. Skip with R_UNO_NO_MUMPS=1 (HiGHS only).
+# Locate the MUMPS C API headers of the 'rmumps' package (mirrors ./configure,
+# which documents the two supported rmumps generations). build_uno.sh compiles
+# Uno's MUMPSSolver.cpp against them (header-only; NO MUMPS library is linked).
+# Skip with R_UNO_NO_MUMPS=1 (HiGHS only).
+RUNO_MUMPS_CPPFLAGS="-DUNO_R_NO_MUMPS"
 if test -z "${R_UNO_NO_MUMPS}"; then
     RMUMPS_INC=`"${R_HOME}/bin/Rscript" -e 'cat(system.file("include", package="rmumps"))'`
-    if test -z "${RMUMPS_INC}" || test ! -f "${RMUMPS_INC}/dmumps_c.h"; then
+    if test -n "${RMUMPS_INC}" && test -f "${RMUMPS_INC}/rmumps/rmumps_api.h"; then
+        export MUMPS_R_INCLUDE_DIRS="${RMUMPS_INC}/rmumps"
+        RUNO_MUMPS_CPPFLAGS="-DUNO_RMUMPS_API"
+        echo "MUMPS headers (rmumps, versioned C interface): ${MUMPS_R_INCLUDE_DIRS}"
+    elif test -n "${RMUMPS_INC}" && test -f "${RMUMPS_INC}/dmumps_c.h"; then
+        export MUMPS_R_INCLUDE_DIRS="${RMUMPS_INC}"
+        RUNO_MUMPS_CPPFLAGS=""
+        echo "MUMPS headers (rmumps, legacy dmumps_c): ${MUMPS_R_INCLUDE_DIRS}"
+    else
         echo "rmumps headers not found (looked in '${RMUMPS_INC}')."
         echo "Install 'rmumps' (>= 5.2.1-43), or set R_UNO_NO_MUMPS=1 to build without MUMPS."
         exit 1
     fi
-    export MUMPS_R_INCLUDE_DIRS="${RMUMPS_INC}"
-    echo "MUMPS headers (rmumps): ${MUMPS_R_INCLUDE_DIRS}"
 fi
+
+# Generate src/uno_status_names.h from the bundled C API header (see ./configure).
+"${R_HOME}/bin/Rscript" tools/gen_status_table.R \
+    inst/uno/interfaces/C/Uno_C_API.h src/uno_status_names.h \
+    || { echo "Generating src/uno_status_names.h failed!"; exit 1; }
 
 # Build the HiGHS QP/LP subproblem solver (static libhighs.a) from source.
 HIGHS_PKG_LIBS=""
@@ -76,6 +86,7 @@ RUNO_PKG_LIBS="-L${R_UNO_LIB_DIR}/lib -luno ${HIGHS_PKG_LIBS}"
 
 sed -e "s|@RUNO_LIB_DIR@|${R_UNO_LIB_DIR}|g" \
     -e "s|@RUNO_PKG_LIBS@|${RUNO_PKG_LIBS}|g" \
+    -e "s|@RUNO_MUMPS_CPPFLAGS@|${RUNO_MUMPS_CPPFLAGS}|g" \
     src/Makevars.in > src/Makevars.win
 
 if [ -z "$(ls ${R_UNO_LIB_DIR} 2>/dev/null | grep 'include')" ]; then

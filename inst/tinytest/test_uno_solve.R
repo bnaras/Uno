@@ -9,6 +9,43 @@
 ## @unopy example_hs015.py (current_uno_version)
 ## uno_version reports the linked Uno version
 expect_true(grepl("^[0-9]+\\.[0-9]+\\.[0-9]+$", uno_version()))
+expect_equal(uno_version(), "2.9.2")   # the bundled Uno (inst/uno submodule pin)
+
+## @unopy NONE
+## The status labels are generated from Uno_C_API.h at install time; the 2.9
+## additions must be present and the pre-2.9 names unchanged.
+labels <- uno_status_labels()
+expect_equal(labels$optimization[["SUCCESS"]], 0L)
+expect_equal(labels$optimization[["USER_TERMINATION"]], 5L)
+expect_equal(labels$optimization[["USER_INTERRUPTION"]], 6L)   # Uno 2.9.1
+expect_equal(labels$solution[["FEASIBLE_KKT_POINT"]], 1L)
+expect_equal(labels$solution[["DIVERGING_ITERATE"]], 6L)       # Uno 2.9.0
+expect_equal(labels$solution[["UNBOUNDED_OBJECTIVE"]], 7L)     # was UNBOUNDED = 6
+expect_false("UNBOUNDED" %in% names(labels$solution))
+
+## @unopy example_hs015.py (options iterator)
+## uno_options() lists every option with its declared type
+opts <- uno_options()
+expect_true(is.data.frame(opts) && all(c("name", "type") %in% names(opts)))
+expect_true(all(opts$type %in% c("integer", "double", "bool", "string")))
+expect_equal(opts$type[opts$name == "max_iterations"], "integer")
+expect_equal(opts$type[opts$name == "primal_tolerance"], "double")  # 2.9: no plain "tolerance"
+expect_equal(opts$type[opts$name == "preset"], "string")
+
+## @unopy NONE
+## MUMPS is reached through rmumps; the version reported is rmumps' MUMPS
+expect_true(grepl("^5\\.[0-9]+\\.[0-9]+$", uno_mumps_version()))
+
+## @unopy NONE
+## an invalid preset is rejected cleanly (Uno 2.9.2 validates preset names)
+expect_error(uno_solve(
+  n = 1L, lb = -Inf, ub = Inf, sense = "minimize",
+  obj = function(x) x^2, grad = function(x) 2 * x,
+  m = 0L, cl = numeric(), cu = numeric(), cons = function(x) numeric(),
+  jac_rows = integer(), jac_cols = integer(), jac = function(x) numeric(),
+  hess_rows = 0L, hess_cols = 0L, hess = function(x, sigma, lambda) 2 * sigma,
+  x0 = 1, preset = "nosuchpreset", base_indexing = 0L, verbose = FALSE
+), "not a valid preset")
 
 ## @unopy NONE
 ## R smoke test: a simple convex NLP via filtersqp + HiGHS (not in unopy).
@@ -54,13 +91,14 @@ res_err <- uno_solve(
 expect_equal(res_err$optimization_status, c(EVALUATION_ERROR = 3L))
 
 ## Everything below exercises the interior-point "ipopt" preset, whose KKT
-## linear solver is MUMPS, reached at runtime from 'rmumps' via
-## R_GetCCallable("rmumps","dmumps_c") (see src/dmumps_shim.c). That C-callable
-## registry resolves on every platform, INCLUDING Windows, so these tests run
-## everywhere. (Before the R_GetCCallable fix the Windows build was HiGHS-only
-## and skipped this whole section, because the old R_FindSymbol route could not
-## see dmumps_c in rmumps.dll's export table. The regression block immediately
-## below guards that fix on Windows.)
+## linear solver is MUMPS, reached at run time from 'rmumps' through the
+## C-callables it registers (src/dmumps_shim.c: the versioned entry points of
+## <rmumps/rmumps_api.h> with rmumps >= 5.2.1-44, else the legacy "dmumps_c").
+## That registry resolves on every platform, INCLUDING Windows, so these tests
+## run everywhere. (Before the R_GetCCallable fix the Windows build was
+## HiGHS-only and skipped this whole section, because the old R_FindSymbol
+## route could not see dmumps_c in rmumps.dll's export table. The regression
+## block immediately below guards that fix on Windows.)
 
 ## @unopy NONE
 ## REGRESSION (MUMPS on Windows): an UNCONSTRAINED convex NLP under the "ipopt"
@@ -133,6 +171,28 @@ expect_equal(res_hs015$optimization_status, c(SUCCESS = 0L))
 expect_equal(res_hs015$solution_status, c(FEASIBLE_KKT_POINT = 1L))
 expect_equal(res_hs015$objective, 306.5, tolerance = 1e-4)  # example asserts <= 1e-4
 expect_equal(res_hs015$primal, c(0.5, 2.0), tolerance = 1e-4)
+
+## @unopy example_hs015.py (set_model_name)
+## the optional model name is accepted (Uno >= 2.9.0) and does not change the solve
+res_named <- uno_solve(
+  n = 2L, lb = c(-Inf, -Inf), ub = c(0.5, Inf), sense = "minimize",
+  obj = hs015_obj, grad = hs015_grad,
+  m = 2L, cl = c(1, 0), cu = c(Inf, Inf), cons = hs015_cons,
+  jac_rows = c(0L, 1L, 0L, 1L), jac_cols = c(0L, 0L, 1L, 1L), jac = hs015_jac,
+  hess_rows = c(0L, 1L, 1L), hess_cols = c(0L, 0L, 1L), hess = hs015_hess,
+  x0 = c(-2, 1), preset = "ipopt", base_indexing = 0L, verbose = FALSE,
+  name = "hs015"
+)
+expect_equal(res_named$objective, res_hs015$objective)
+expect_error(uno_solve(
+  n = 2L, lb = c(-Inf, -Inf), ub = c(0.5, Inf), sense = "minimize",
+  obj = hs015_obj, grad = hs015_grad,
+  m = 2L, cl = c(1, 0), cu = c(Inf, Inf), cons = hs015_cons,
+  jac_rows = c(0L, 1L, 0L, 1L), jac_cols = c(0L, 0L, 1L, 1L), jac = hs015_jac,
+  hess_rows = c(0L, 1L, 1L), hess_cols = c(0L, 0L, 1L), hess = hs015_hess,
+  x0 = c(-2, 1), preset = "ipopt", base_indexing = 0L, verbose = FALSE,
+  name = c("a", "b")
+), "single string")
 ## duals are returned for both constraints and both bounds (HS015 has an active
 ## constraint and an active upper bound); the example prints but does not assert
 ## their values, so we only check they are present and finite.

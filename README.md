@@ -21,7 +21,8 @@ Two solver paths are provided:
   (built from source with the package), and
 * the **`ipopt`** interior-point preset, whose KKT systems are solved by
   **MUMPS**, reached at run time through the
-  [rmumps](https://cran.r-project.org/package=rmumps) package.
+  [rmumps](https://cran.r-project.org/package=rmumps) package
+  (`uno_mumps_version()` tells which MUMPS that is).
 
 ## Installation
 
@@ -35,7 +36,10 @@ remotes::install_github("bnaras/Uno")
 A C++17 compiler and CMake (>= 3.16) are required for source builds as
 the package builds the underlying Uno and HiGHS from source. MUMPS
 comes from the `rmumps` dependency, so there is no separate MUMPS
-installation.
+installation. A source build binds to the `rmumps` installed at the
+time: `rmumps` 5.2.1-44 or later through its versioned C interface
+(`rmumps` 5.9.1-1 brings MUMPS 5.9.1), `rmumps` 5.2.1-43 through the
+legacy `dmumps_c` entry point.
 
 ## Quick example
 

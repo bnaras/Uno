@@ -1,4 +1,32 @@
-# Uno 2.7.4-2
+# Uno 2.9.2-1
+
+* Updated the bundled Uno C++ solver from 2.7.4 to upstream release 2.9.2. Uno
+  2.9 adds the `auto` preset (chosen by problem size), function scaling for all
+  methods, a Ctrl-C handler that stops a solve cleanly with the new
+  `USER_INTERRUPTION` status, and two solution statuses: `DIVERGING_ITERATE`
+  and `UNBOUNDED_OBJECTIVE` (which replaces `UNBOUNDED`). The R-packaging patch
+  set was rebased onto v2.9.2.
+
+* The status labels `uno_solve()` returns are now generated from Uno's C API
+  header at install time, so they follow the bundled Uno exactly;
+  `uno_status_labels()` lists them.
+
+* MUMPS through `rmumps`, two generations: with `rmumps` 5.2.1-44 or later the
+  package binds to the versioned C interface `<rmumps/rmumps_api.h>`, whose
+  entry points are named after the MUMPS structure layout they were built for,
+  so a mismatch between the `rmumps` a binary was built against and the one
+  installed is a clear error when the package loads rather than memory
+  corruption; `rmumps` 5.9.1-1 brings MUMPS 5.9.1 this way. With `rmumps`
+  5.2.1-43 the legacy `dmumps_c` entry point is used as before. The binding
+  happens in `.onLoad`. `uno_mumps_version()` reports the MUMPS reached.
+
+* New: `uno_options()` lists every Uno option with its type; `uno_solve()`
+  gains a `name` argument (the model name in Uno's log) and validates the
+  preset; without a `log_callback`, Uno's output now goes to the R console
+  through an explicit logger sink.
+
+* Build: Uno is configured with `-DUSE_OPENMP=OFF` (Uno 2.7.5 made OpenMP the
+  default, which its CMake requires whenever MUMPS is present).
 
 * Fixed an installation failure on glibc 2.36 and older (Debian 12, Ubuntu
   22.04 LTS, RHEL 9), where the bundled HiGHS build stopped.
