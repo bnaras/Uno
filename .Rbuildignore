@@ -8,6 +8,7 @@
 ^.*\.o$
 ^.*\.so$
 ^\.gitignore$
+^\.git$
 ^cran-comments\.md$
 ^LICENSE\.md$
 ^_pkgdown\.yml$
@@ -21,6 +22,18 @@
 ^inst/uno/interfaces/R$
 ^inst/uno/interfaces/Python$
 ^inst/uno/interfaces/Julia
+^inst/uno/interfaces/AMPL$
+^inst/uno/interfaces/C/example$
+^inst/uno/interfaces/Fortran/example_uno\.f90$
+^inst/uno/interfaces/.*/README\.md$
+^inst/uno/docs$
+^inst/uno/mkdocs\.yml$
+^inst/uno/unotest$
+^inst/uno/cmake$
+^inst/uno/dependencies$
+^inst/uno/pyproject\.toml$
+^inst/uno/uno_default\.opt$
+^inst/uno/uno_mittelmann\.opt$
 ^tools/shorten_paths\.R$
 ^tools/path_shortenings\.csv$
 ^tools/build-logo\.R$

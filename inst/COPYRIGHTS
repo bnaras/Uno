@@ -1,8 +1,18 @@
 Uno R package -- copyright and licensing of bundled code
 ========================================================
 
-The Uno R package itself -- the R code, src/uno_binding.cpp, and
-src/dmumps_shim.c -- is released under the MIT License (see the file LICENSE).
+Scope. This file describes the SOURCE package (the tarball). The bundled
+sources under inst/uno/ and inst/HiGHS/ are compiled into the package library
+at installation time and are then removed from the installed package (see
+.Rinstignore), so an installed copy of this file is self-contained: it quotes
+each copyright statement and names the license, and the MIT text referred to
+below is the one in the package's own LICENSE file (identical to the MIT text
+every bundled MIT component carries).
+
+The Uno R package itself -- the R code, src/uno_binding.cpp, src/dmumps_shim.c,
+src/dmumps_shim.h, the configure scripts, inst/build_*.sh, tools/, the vignette
+and the documentation -- is Copyright (c) 2026 Balasubramanian Narasimhan and
+is released under the MIT License (file LICENSE).
 
 For convenience the package builds and statically links the following
 third-party libraries from bundled source. Every bundled component is under a
@@ -11,13 +21,62 @@ Boost Software License 1.0); none is copyleft.
 
 
 1. Uno (C++ nonlinear optimization solver) -- inst/uno/
-   Copyright (c) 2018-2025 Charlie Vanaret.
-   MIT License. Full text: inst/uno/LICENSE
+   Copyright (c) 2018-2026 Charlie Vanaret.
+   MIT License. Full text: inst/uno/LICENSE in the source package (its holder
+   line reads "2018-2025 Charlie Vanaret"; the per-file headers range from
+   2018 to 2026). Every source file states "See LICENSE file in the project
+   directory", which is that file.
+
+   Co-holders named on individual files (all MIT, same license text):
+
+     Alexis Montoison (with Charlie Vanaret)
+       inst/uno/interfaces/C/Uno_C_API.cpp, Uno_C_API.h -- the C API the R
+       binding calls; compiled into the package library.
+       inst/uno/interfaces/Fortran/uno_c.f90, uno_fortran.f90 -- installed
+       by Uno's CMake as public headers; not compiled.
+       inst/uno/uno/ingredients/subproblem_solvers/MA86/ -- compiled only
+       when an HSL library is found (see "Conditional components").
+
+     Joris Gillis, Alexis Montoison and Charlie Vanaret
+       inst/uno/uno/tools/DynamicLoader.cpp, DynamicLoader.hpp -- compiled
+       into the package library.
+       inst/uno/uno/ingredients/subproblem_solvers/HSL/HSLLoader.cpp,
+       HSLLoader.hpp -- not compiled (HSL runtime loading is off).
+
+     David Kiessling and Charlie Vanaret
+       inst/uno/uno/ingredients/glob/switching/funnel_methods/FunnelMethod.cpp,
+       FunnelMethod.hpp -- compiled into the package library.
+
+     Manuel Schaich (MA27Solver.hpp), Manuel Schaich and Charlie Vanaret
+     (MA27Solver.cpp)
+       inst/uno/uno/ingredients/subproblem_solvers/MA27/ -- compiled only
+       when an HSL or MA27 library is found on the build machine.
+
+   Conditional components. Uno's CMake compiles its MA27, MA57 and MA86 (HSL)
+   and BQPD interfaces only if the corresponding library is found on the
+   build machine. None of those libraries is bundled or required; on a
+   machine without them the files are not compiled.
+
+   Not shipped. Uno's documentation (docs/, mkdocs.yml), its test suite
+   (unotest/), the AMPL, Python, Julia and R interfaces, the C and Fortran
+   examples, its CMake find-modules (cmake/), dependencies/, pyproject.toml
+   and the option files for the AMPL driver are excluded from the source
+   package (.Rbuildignore); nothing in the package build reads them.
+
+   Fork additions. inst/uno/uno/tools/r_io.h and the UNO_R_PRINT console
+   plumbing were written for this package (Balasubramanian Narasimhan) and
+   carry Uno's header so that the tree stays uniform; they are not upstream.
+
+   Acknowledgments, not copyright holders: Sven Leyffer co-developed the
+   unification framework Uno implements (Vanaret and Leyffer, 2026,
+   Mathematical Programming Computation, doi:10.1007/s12532-026-00310-9) and
+   appears on no source file; some default parameter values are noted in the
+   sources as taken from IPOPT and MadNLP (values only, no code).
 
 
 2. HiGHS (LP / QP / MIP solver) -- inst/HiGHS/
    Copyright (c) HiGHS authors.
-   MIT License. Full text: inst/HiGHS/LICENSE.txt
+   MIT License. Full text: inst/HiGHS/LICENSE.txt in the source package.
 
    HiGHS in turn bundles, under inst/HiGHS/extern/ and
    inst/HiGHS/highs/io/filereaderlp/:
@@ -65,9 +124,10 @@ Components NOT bundled
 
 MUMPS is NOT included in this package. The interior-point preset reaches MUMPS
 at run time through the separately installed 'rmumps' package, via the
-C-callables rmumps registers (see src/dmumps_shim.c). 'rmumps' is licensed
-GPL (>= 2); no MUMPS source is distributed here, and the package compiles only
-against rmumps's C API headers. Builds without MUMPS (HiGHS-only) are supported.
+C-callables rmumps registers (see src/dmumps_shim.c, which copies no MUMPS
+code and only includes rmumps's headers). 'rmumps' is licensed GPL (>= 2); no
+MUMPS source is distributed here, and the package compiles only against
+rmumps's C API headers. Builds without MUMPS (HiGHS-only) are supported.
 
 BQPD, an SQP subproblem solver that Uno can optionally use, is NOT bundled,
 owing to its restrictive license.

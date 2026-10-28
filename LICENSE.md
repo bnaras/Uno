@@ -1,6 +1,6 @@
 # MIT License
 
-Copyright (c) 2026 Charlie Vanaret and Sven Leyffer
+Copyright (c) 2026 Balasubramanian Narasimhan
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

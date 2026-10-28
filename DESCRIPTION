@@ -2,14 +2,21 @@ Package: Uno
 Type: Package
 Title: R Interface to the 'Uno' Nonlinear Optimization Solver
 Version: 2.9.2-1
-Date: 2026-10-26
+Date: 2026-10-28
 Authors@R: c(
-    person("Balasubramanian", "Narasimhan", role = c("aut", "cre"),
-           email = "naras@stanford.edu"),
+    person("Balasubramanian", "Narasimhan", role = c("aut", "cre", "cph"),
+           email = "naras@stanford.edu",
+           comment = "R package: R/, src/uno_binding.cpp, src/dmumps_shim.c, build scripts"),
     person("Charlie", "Vanaret", role = c("aut", "cph"),
-           comment = "Designed and implemented Uno"),
-    person("Sven", "Leyffer", role = c("aut", "cph"),
-           comment = "Co-developed the Uno framework"),
+           comment = "Bundled Uno C++ solver (inst/uno, MIT); designed and implemented Uno"),
+    person("Alexis", "Montoison", role = c("ctb", "cph"),
+           comment = "Uno C API (inst/uno/interfaces/C) and Fortran interface, MA86 interface"),
+    person("Joris", "Gillis", role = c("ctb", "cph"),
+           comment = "Uno dynamic loader (inst/uno/uno/tools/DynamicLoader.*)"),
+    person("David", "Kiessling", role = c("ctb", "cph"),
+           comment = "Uno funnel globalization method (inst/uno/uno/ingredients/glob/switching/funnel_methods)"),
+    person("Manuel", "Schaich", role = c("ctb", "cph"),
+           comment = "Uno MA27 interface (inst/uno/uno/ingredients/subproblem_solvers/MA27); compiled only when HSL is found"),
     person("HiGHS development team", role = "cph",
            comment = "Bundled HiGHS LP/QP/MIP solver (MIT); see inst/COPYRIGHTS"))
 Description: Bindings to 'Uno' (Unifying Nonlinear Optimization), a C++ solver
@@ -19,8 +26,8 @@ Description: Bindings to 'Uno' (Unifying Nonlinear Optimization), a C++ solver
     (constraint-relaxation, inequality-handling, Hessian, and globalization
     strategies) that can be freely combined, either through options or through
     presets that reproduce established solvers such as 'filterSQP' and 'IPOPT'.
-    The framework is described in Vanaret and Leyffer (2024)
-    <doi:10.48550/arXiv.2406.13454>.
+    The framework is described in Vanaret and Leyffer (2026)
+    <doi:10.1007/s12532-026-00310-9>.
 License: MIT + file LICENSE
 Copyright: file inst/COPYRIGHTS
 URL: https://bnaras.github.io/Uno/, https://github.com/bnaras/Uno

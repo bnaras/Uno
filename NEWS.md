@@ -31,6 +31,19 @@
   0, which Uno treats as a failed flush. The callback now receives the whole
   log, once.
 
+* `citation("Uno")` now gives a single entry for the R package and points to
+  the references the Uno authors maintain for the solver; the package
+  description cites the published Mathematical Programming Computation paper
+  (Vanaret and Leyffer, 2026) instead of the preprint.
+
+* Authorship and copyright: `Authors@R` names every copyright holder of the
+  bundled Uno sources (Alexis Montoison, Joris Gillis, David Kiessling and
+  Manuel Schaich alongside Charlie Vanaret), the package's own code is
+  attributed to its author, and `inst/COPYRIGHTS` is self-contained after
+  installation. Uno's documentation, test suite, AMPL interface, examples
+  and CMake find-modules, none of which the build reads, no longer ship in
+  the source package.
+
 * Build: Uno is configured with `-DUSE_OPENMP=OFF` (Uno 2.7.5 made OpenMP the
   default, which its CMake requires whenever MUMPS is present). The bundled
   Uno's CMake gains a `FORTRAN_MANGLING_UNDERSCORE` option, which the package

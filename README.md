@@ -79,17 +79,20 @@ after the preset). See `vignette("Uno")` for the full walk-through.
 
 ## Citation
 
-If you use this package, please cite both the R package and the paper
-describing the Uno solver. Run `citation("Uno")` for the up-to-date entries, or:
+To cite the R package, run `citation("Uno")`, or:
 
-> Narasimhan B, Vanaret C, Leyffer S (2026). *Uno: R Interface to the Uno
-> Nonlinear Optimization Solver*. R package.
-> <https://github.com/bnaras/Uno>.
->
-> Vanaret C, Leyffer S (2024). *Implementing a unified solver for nonlinearly
-> constrained optimization.* arXiv:2406.13454.
-> <https://doi.org/10.48550/arXiv.2406.13454>.
+> Narasimhan B (2026). *Uno: R Interface to the Uno Nonlinear Optimization
+> Solver*. R package. <https://github.com/bnaras/Uno>.
+
+To cite the Uno solver itself, use the references its authors maintain under
+["Cite Uno"](https://github.com/cvanaret/Uno#cite-uno): the theory paper
+(Vanaret and Leyffer, 2026, *Mathematical Programming Computation*,
+<https://doi.org/10.1007/s12532-026-00310-9>) and the software paper (Vanaret
+and Montoison, 2026, *Journal of Open Source Software*,
+<https://doi.org/10.21105/joss.10229>).
 
 ## License
 
-MIT. Uno is by Charlie Vanaret and Sven Leyffer.
+MIT. The bundled Uno solver is Copyright Charlie Vanaret and contributors, and
+the bundled HiGHS solver Copyright the HiGHS authors, both MIT; see
+`inst/COPYRIGHTS` for every copyright holder of bundled code.
