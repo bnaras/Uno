@@ -14,7 +14,9 @@ Two solver paths are provided:
   **HiGHS** (built from source with the package), and
 - the **`ipopt`** interior-point preset, whose KKT systems are solved by
   **MUMPS**, reached at run time through the
-  [rmumps](https://cran.r-project.org/package=rmumps) package.
+  [rmumps](https://cran.r-project.org/package=rmumps) package
+  ([`uno_mumps_version()`](https://bnaras.github.io/Uno/reference/uno_mumps_version.md)
+  tells which MUMPS that is).
 
 ## Installation
 
@@ -29,7 +31,10 @@ remotes::install_github("bnaras/Uno")
 A C++17 compiler and CMake (\>= 3.16) are required for source builds as
 the package builds the underlying Uno and HiGHS from source. MUMPS comes
 from the `rmumps` dependency, so there is no separate MUMPS
-installation.
+installation. A source build binds to the `rmumps` installed at the
+time: `rmumps` 5.2.1-44 or later through its versioned C interface
+(`rmumps` 5.9.1-1 brings MUMPS 5.9.1), `rmumps` 5.2.1-43 through the
+legacy `dmumps_c` entry point.
 
 ## Quick example
 
@@ -72,21 +77,24 @@ the full walk-through.
 
 ## Citation
 
-If you use this package, please cite both the R package and the paper
-describing the Uno solver. Run `citation("Uno")` for the up-to-date
-entries, or:
+To cite the R package, run `citation("Uno")`, or:
 
-> Narasimhan B, Vanaret C, Leyffer S (2026). *Uno: R Interface to the
-> Uno Nonlinear Optimization Solver*. R package.
-> <https://github.com/bnaras/Uno>.
->
-> Vanaret C, Leyffer S (2024). *Implementing a unified solver for
-> nonlinearly constrained optimization.* arXiv:2406.13454.
-> <https://doi.org/10.48550/arXiv.2406.13454>.
+> Narasimhan B (2026). *Uno: R Interface to the Uno Nonlinear
+> Optimization Solver*. R package. <https://github.com/bnaras/Uno>.
+
+To cite the Uno solver itself, use the references its authors maintain
+under [“Cite Uno”](https://github.com/cvanaret/Uno#cite-uno): the theory
+paper (Vanaret and Leyffer, 2026, *Mathematical Programming
+Computation*, <https://doi.org/10.1007/s12532-026-00310-9>) and the
+software paper (Vanaret and Montoison, 2026, *Journal of Open Source
+Software*, <https://doi.org/10.21105/joss.10229>).
 
 ## License
 
-MIT. Uno is by Charlie Vanaret and Sven Leyffer.
+MIT. The bundled Uno solver is Copyright Charlie Vanaret and
+contributors, and the bundled HiGHS solver Copyright the HiGHS authors,
+both MIT; see `inst/COPYRIGHTS` for every copyright holder of bundled
+code.
 
 # Package index
 
@@ -97,6 +105,15 @@ Solve a nonlinear program with Uno.
 - [`uno_solve()`](https://bnaras.github.io/Uno/reference/uno_solve.md) :
   Solve a nonlinear program with Uno
 
+## Options and statuses
+
+Solver options and the termination statuses uno_solve can report.
+
+- [`uno_options()`](https://bnaras.github.io/Uno/reference/uno_options.md)
+  : Uno solver options
+- [`uno_status_labels()`](https://bnaras.github.io/Uno/reference/uno_status_labels.md)
+  : Uno status labels
+
 ## Package
 
 - [`Uno`](https://bnaras.github.io/Uno/reference/Uno-package.md)
@@ -104,6 +121,8 @@ Solve a nonlinear program with Uno.
   : Uno: R interface to the Uno nonlinear optimization solver
 - [`uno_version`](https://bnaras.github.io/Uno/reference/uno_version.md)
   : Linked Uno version
+- [`uno_mumps_version()`](https://bnaras.github.io/Uno/reference/uno_mumps_version.md)
+  : MUMPS version reached through rmumps
 
 # Articles
 

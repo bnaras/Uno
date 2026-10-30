@@ -5,11 +5,11 @@ against.
 
 ## Value
 
-A character scalar, e.g. `"2.7.2"`.
+A character scalar, e.g. `"2.9.2"`.
 
 ## Examples
 
 ``` r
 uno_version()
-#> [1] "2.7.4"
+#> [1] "2.9.2"
 ```

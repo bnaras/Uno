@@ -19,7 +19,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">Uno</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.7.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.9.2-1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -69,16 +69,16 @@ R analog of the <code>unopy</code> Python binding, and is intended as
 the nonlinear (DNLP) solver backend for <a href="https://cvxr.rbind.io" class="external-link">CVXR</a>.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/uno_version.html">uno_version</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "2.7.4"</span></span></code></pre></div>
+<span><span class="co">#&gt; [1] "2.9.2"</span></span></code></pre></div>
 <p>Two solver paths are available, selected with the <code>preset</code>
 argument:</p>
 <ul>
 <li>
 <strong><code>ipopt</code></strong> — an interior-point method whose
 symmetric-indefinite KKT systems are factored by <strong>MUMPS</strong>,
-reached at run time through the <a href="https://cran.r-project.org/package=rmumps" class="external-link">rmumps</a> package. It
-handles indefiniteness (nonconvex problems) through inertia
-correction.</li>
+reached at run time through the <a href="https://cran.r-project.org/package=rmumps" class="external-link">rmumps</a> package
+(<code><a href="../reference/uno_mumps_version.html">uno_mumps_version()</a></code> reports which MUMPS). It handles
+indefiniteness (nonconvex problems) through inertia correction.</li>
 <li>
 <strong><code>filtersqp</code></strong> — a filter SQP method whose
 QP subproblems are solved by <strong>HiGHS</strong> (built from source
@@ -575,15 +575,27 @@ inertia correction in MUMPS.</li>
 <p>Any Uno option can be passed through <code>options</code>; values are
 coerced to the option’s declared type and applied after the preset:</p>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># cap the iteration count and tighten the tolerance</span></span>
+<code class="sourceCode R"><span><span class="co"># cap the iteration count and tighten the primal tolerance</span></span>
 <span><span class="fu"><a href="../reference/uno_solve.html">uno_solve</a></span><span class="op">(</span><span class="va">...</span>, preset <span class="op">=</span> <span class="st">"ipopt"</span>,</span>
-<span>          options <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>max_iterations <span class="op">=</span> <span class="fl">200L</span>, tolerance <span class="op">=</span> <span class="fl">1e-8</span><span class="op">)</span><span class="op">)</span></span>
+<span>          options <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>max_iterations <span class="op">=</span> <span class="fl">200L</span>, primal_tolerance <span class="op">=</span> <span class="fl">1e-8</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># pick the linear solver explicitly, and silence output</span></span>
 <span><span class="fu"><a href="../reference/uno_solve.html">uno_solve</a></span><span class="op">(</span><span class="va">...</span>, preset <span class="op">=</span> <span class="st">"ipopt"</span>,</span>
 <span>          options <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>linear_solver <span class="op">=</span> <span class="st">"MUMPS"</span>, logger <span class="op">=</span> <span class="st">"SILENT"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p>An unknown option name, or a value the option rejects, raises an
-error rather than being silently ignored.</p>
+error rather than being silently ignored. <code><a href="../reference/uno_options.html">uno_options()</a></code>
+lists every option of the linked Uno with its declared type:</p>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="../reference/uno_options.html">uno_options</a></span><span class="op">(</span><span class="op">)</span>, <span class="fl">8</span><span class="op">)</span></span>
+<span><span class="co">#&gt;                                                  name    type</span></span>
+<span><span class="co">#&gt; 51                     acceptable_iteration_threshold integer</span></span>
+<span><span class="co">#&gt; 73              acceptable_objective_change_tolerance  double</span></span>
+<span><span class="co">#&gt; 81                               acceptable_tolerance  double</span></span>
+<span><span class="co">#&gt; 74      acceptable_unscaled_complementarity_tolerance  double</span></span>
+<span><span class="co">#&gt; 62 acceptable_unscaled_primal_infeasibility_tolerance  double</span></span>
+<span><span class="co">#&gt; 91         acceptable_unscaled_stationarity_tolerance  double</span></span>
+<span><span class="co">#&gt; 92                           armijo_decrease_fraction  double</span></span>
+<span><span class="co">#&gt; 93                                   armijo_tolerance  double</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="monitoring-and-early-termination">Monitoring and early termination<a class="anchor" aria-label="anchor" href="#monitoring-and-early-termination"></a>
@@ -602,7 +614,7 @@ or <code>TRUE</code> to <strong>stop early</strong> — in which case the
 <p>Used as a pure monitor (always returning <code>FALSE</code>), it lets
 you watch convergence. Here we record the stationarity residual at each
 iterate of the Rosenbrock solve:</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">ros_obj</span>  <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="op">(</span><span class="fl">1</span> <span class="op">-</span> <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">)</span><span class="op">^</span><span class="fl">2</span> <span class="op">+</span> <span class="fl">100</span> <span class="op">*</span> <span class="op">(</span><span class="va">x</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span> <span class="op">-</span> <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span><span class="op">^</span><span class="fl">2</span></span>
 <span><span class="va">ros_grad</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">2</span> <span class="op">*</span> <span class="op">(</span><span class="fl">1</span> <span class="op">-</span> <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">)</span> <span class="op">-</span> <span class="fl">400</span> <span class="op">*</span> <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">*</span> <span class="op">(</span><span class="va">x</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span> <span class="op">-</span> <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span>,</span>
 <span>                          <span class="fl">200</span> <span class="op">*</span> <span class="op">(</span><span class="va">x</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span> <span class="op">-</span> <span class="va">x</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span><span class="op">)</span></span>
@@ -627,12 +639,12 @@ iterate of the Rosenbrock solve:</p>
 <span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">stationarity</span><span class="op">)</span>                                 <span class="co"># one entry per acceptable iterate</span></span>
 <span><span class="co">#&gt; [1] 21</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">signif</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/range.html" class="external-link">range</a></span><span class="op">(</span><span class="va">stationarity</span><span class="op">)</span>, <span class="fl">3</span><span class="op">)</span>                       <span class="co"># residual shrinks toward 0</span></span>
-<span><span class="co">#&gt; [1] 3.73e-10 2.60e+01</span></span></code></pre></div>
+<span><span class="co">#&gt; [1] 1.73e-10 1.20e+01</span></span></code></pre></div>
 <p>Returning <code>TRUE</code> stops the solve. For example, to bail out
 after five acceptable iterates — note the super-assignment
 <code>&lt;&lt;-</code>, needed so the counter persists across calls
 rather than writing a local copy:</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">iter</span> <span class="op">&lt;-</span> <span class="fl">0L</span></span>
 <span><span class="va">stopped</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/uno_solve.html">uno_solve</a></span><span class="op">(</span></span>
 <span>  n <span class="op">=</span> <span class="fl">2L</span>, lb <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="cn">Inf</span>, <span class="op">-</span><span class="cn">Inf</span><span class="op">)</span>, ub <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="cn">Inf</span>, <span class="cn">Inf</span><span class="op">)</span>, sense <span class="op">=</span> <span class="st">"minimize"</span>,</span>
@@ -670,7 +682,7 @@ argument list.</li>
 
 
     <footer><div class="pkgdown-footer-left">
-  <p>Developed by <a href="https://naras.su.domains" class="external-link">Balasubramanian Narasimhan</a>, <a href="https://cvanaret.wordpress.com/" class="external-link">Charlie Vanaret</a>, <a href="https://www.anl.gov/profile/sven-leyffer" class="external-link">Sven Leyffer</a>.</p>
+  <p>Developed by <a href="https://naras.su.domains" class="external-link">Balasubramanian Narasimhan</a>, <a href="https://cvanaret.wordpress.com/" class="external-link">Charlie Vanaret</a>.</p>
 </div>
 
 <div class="pkgdown-footer-right">

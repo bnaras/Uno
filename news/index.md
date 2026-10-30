@@ -1,5 +1,102 @@
 # Changelog
 
+## Uno 2.9.2-1
+
+- Updated the bundled Uno C++ solver from 2.7.4 to upstream release
+  2.9.2. Uno 2.9 adds the `auto` preset (chosen by problem size),
+  function scaling for all methods, a Ctrl-C handler that stops a solve
+  cleanly with the new `USER_INTERRUPTION` status, and two solution
+  statuses: `DIVERGING_ITERATE` and `UNBOUNDED_OBJECTIVE` (which
+  replaces `UNBOUNDED`). The R-packaging patch set was rebased onto
+  v2.9.2.
+
+- Updated the bundled HiGHS from 1.14.0 to 1.15.1, the version in the
+  CRAN `highs` package, with two upstream fixes not yet in a HiGHS
+  release: ERGO-Code/HiGHS#3430 (uninitialized `bool` members, reported
+  by UBSAN on every QP solve) and
+  [\#3472](https://github.com/bnaras/Uno/issues/3472) (a container
+  overflow in presolve, reported by AddressSanitizer), the latter moved
+  to its 1.15.1 location. HiGHS’s `extern/` extras library is not built:
+  it serves only the HiPO solver, which is off.
+
+- The status labels
+  [`uno_solve()`](https://bnaras.github.io/Uno/reference/uno_solve.md)
+  returns are now generated from Uno’s C API header at install time, so
+  they follow the bundled Uno exactly;
+  [`uno_status_labels()`](https://bnaras.github.io/Uno/reference/uno_status_labels.md)
+  lists them.
+
+- MUMPS through `rmumps`, two generations: with `rmumps` 5.2.1-44 or
+  later the package binds to the versioned C interface
+  `<rmumps/rmumps_api.h>`, whose entry points are named after the MUMPS
+  structure layout they were built for, so a mismatch between the
+  `rmumps` a binary was built against and the one installed is a clear
+  error when the package loads rather than memory corruption; `rmumps`
+  5.9.1-1 brings MUMPS 5.9.1 this way. With `rmumps` 5.2.1-43 the legacy
+  `dmumps_c` entry point is used as before. The binding happens in
+  `.onLoad`.
+  [`uno_mumps_version()`](https://bnaras.github.io/Uno/reference/uno_mumps_version.md)
+  reports the MUMPS reached.
+
+- New:
+  [`uno_options()`](https://bnaras.github.io/Uno/reference/uno_options.md)
+  lists every Uno option with its type;
+  [`uno_solve()`](https://bnaras.github.io/Uno/reference/uno_solve.md)
+  gains a `name` argument (the model name in Uno’s log) and validates
+  the preset; without a `log_callback`, Uno’s output now goes to the R
+  console through an explicit logger sink.
+
+- Fixed `log_callback`, which received Uno’s preamble twice and never
+  the iteration table or the final summary: Uno’s stream buffer expects
+  the callback to return the number of bytes it consumed, and the
+  binding returned 0, which Uno treats as a failed flush. The callback
+  now receives the whole log, once.
+
+- `citation("Uno")` now gives a single entry for the R package and
+  points to the references the Uno authors maintain for the solver; the
+  package description cites the published Mathematical Programming
+  Computation paper (Vanaret and Leyffer, 2026) instead of the preprint.
+
+- Authorship and copyright: `Authors@R` names every copyright holder of
+  the bundled Uno sources (Alexis Montoison, Joris Gillis, David
+  Kiessling and Manuel Schaich alongside Charlie Vanaret), the package’s
+  own code is attributed to its author, and `inst/COPYRIGHTS` is
+  self-contained after installation. Uno’s documentation, test suite,
+  AMPL interface, examples and CMake find-modules, none of which the
+  build reads, no longer ship in the source package.
+
+- Build: Uno is configured with `-DUSE_OPENMP=OFF` (Uno 2.7.5 made
+  OpenMP the default, which its CMake requires whenever MUMPS is
+  present). The bundled Uno’s CMake gains a
+  `FORTRAN_MANGLING_UNDERSCORE` option, which the package turns on:
+  BLAS/LAPACK symbol names are spelled with the gfortran convention R
+  uses everywhere instead of being discovered by compiling and linking a
+  Fortran probe, so installing no longer needs a working Fortran link
+  step (nothing in the build is Fortran; R supplies BLAS, LAPACK and the
+  Fortran runtime at link time). For the same reason R’s BLAS and LAPACK
+  link names are handed to Uno’s CMake directly instead of letting it
+  search for libraries the archive never links (the search failed on
+  Rtools without a Fortran compiler). The bundled Uno’s
+  `DynamicLoader.cpp` includes `<cstdlib>` for `std::getenv`, which LLVM
+  23’s libc++ no longer provides transitively (CRAN’s
+  `r-devel-linux-x86_64-fedora-clang`); the 2.7.4-1 fix of
+  `VectorView.hpp` is moot, that file is gone upstream.
+
+- Fixed an installation failure on glibc 2.36 and older (Debian 12,
+  Ubuntu 22.04 LTS, RHEL 9), where the bundled HiGHS build stopped.
+
+## Uno 2.7.4-1
+
+CRAN release: 2026-08-30
+
+- Fixed a compilation failure with LLVM 23’s libc++, reported by CRAN’s
+  `r-devel-linux-x86_64-fedora-clang` check. libc++ 23 dropped many
+  transitive includes in all language modes, so the bundled Uno solver’s
+  `VectorView.hpp` no longer saw `<algorithm>` and its use of
+  `std::fill` failed to compile, taking 28 translation units with it.
+  The header now includes `<algorithm>` directly. No user-visible
+  change.
+
 ## Uno 2.7.4
 
 CRAN release: 2026-06-17

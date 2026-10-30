@@ -3,15 +3,17 @@
 Optimization), a C++ solver for nonlinearly constrained optimization, via
 Uno's C API. The HiGHS QP/LP subproblem solver is built from source for the
 SQP presets; the MUMPS linear solver used by the interior-point preset is
-reached at runtime through the rmumps package. Intended as a nonlinear
-(DNLP) backend for CVXR; this is the R analog of the unopy
-Python package."><meta property="og:description" content="R bindings to Uno (Unifying Nonlinear
+reached at run time through the rmumps package (bound when the
+namespace loads; see uno_mumps_version). Intended as a
+nonlinear (DNLP) backend for CVXR; this is the R analog of the
+unopy Python package."><meta property="og:description" content="R bindings to Uno (Unifying Nonlinear
 Optimization), a C++ solver for nonlinearly constrained optimization, via
 Uno's C API. The HiGHS QP/LP subproblem solver is built from source for the
 SQP presets; the MUMPS linear solver used by the interior-point preset is
-reached at runtime through the rmumps package. Intended as a nonlinear
-(DNLP) backend for CVXR; this is the R analog of the unopy
-Python package."><meta property="og:image" content="https://bnaras.github.io/Uno/logo.png"></head><body>
+reached at run time through the rmumps package (bound when the
+namespace loads; see uno_mumps_version). Intended as a
+nonlinear (DNLP) backend for CVXR; this is the R analog of the
+unopy Python package."><meta property="og:image" content="https://bnaras.github.io/Uno/logo.png"></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -19,7 +21,7 @@ Python package."><meta property="og:image" content="https://bnaras.github.io/Uno
 
     <a class="navbar-brand me-2" href="../index.html">Uno</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.7.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.9.2-1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -50,22 +52,27 @@ Python package."><meta property="og:image" content="https://bnaras.github.io/Uno
 Optimization), a C++ solver for nonlinearly constrained optimization, via
 Uno's C API. The HiGHS QP/LP subproblem solver is built from source for the
 SQP presets; the MUMPS linear solver used by the interior-point preset is
-reached at runtime through the <span class="pkg">rmumps</span> package. Intended as a nonlinear
-(DNLP) backend for <span class="pkg">CVXR</span>; this is the R analog of the <code>unopy</code>
-Python package.</p>
+reached at run time through the <span class="pkg">rmumps</span> package (bound when the
+namespace loads; see <code><a href="uno_mumps_version.html">uno_mumps_version</a></code>). Intended as a
+nonlinear (DNLP) backend for <span class="pkg">CVXR</span>; this is the R analog of the
+<code>unopy</code> Python package.</p>
     </div>
 
 
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
     <div class="dont-index"><p><code><a href="uno_solve.html">uno_solve</a></code> to solve a nonlinear program,
-  <code><a href="uno_version.html">uno_version</a></code> for the linked Uno version.</p></div>
+  <code><a href="uno_version.html">uno_version</a></code> for the linked Uno version,
+  <code><a href="uno_options.html">uno_options</a></code> and <code><a href="uno_status_labels.html">uno_status_labels</a></code> for what the
+  linked Uno accepts and returns.</p></div>
     </div>
     <div class="section level2">
     <h2 id="author">Author<a class="anchor" aria-label="anchor" href="#author"></a></h2>
     <p><strong>Maintainer</strong>: Balasubramanian Narasimhan <a href="mailto:naras@stanford.edu">naras@stanford.edu</a></p>
-<p>Authors:</p><ul><li><p>Charlie Vanaret (Designed and implemented Uno) [copyright holder]</p></li>
+<p>Authors:</p><ul><li><p>Balasubramanian Narasimhan <a href="mailto:naras@stanford.edu">naras@stanford.edu</a></p></li>
+<li><p>Charlie Vanaret (Designed and implemented Uno) [copyright holder]</p></li>
 <li><p>Sven Leyffer (Co-developed the Uno framework) [copyright holder]</p></li>
+</ul><p>Other contributors:</p><ul><li><p>HiGHS development team (Bundled HiGHS LP/QP/MIP solver (MIT); see inst/COPYRIGHTS) [copyright holder]</p></li>
 </ul></div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
@@ -73,7 +80,7 @@ Python package.</p>
 
 
     <footer><div class="pkgdown-footer-left">
-  <p>Developed by <a href="https://naras.su.domains" class="external-link">Balasubramanian Narasimhan</a>, <a href="https://cvanaret.wordpress.com/" class="external-link">Charlie Vanaret</a>, <a href="https://www.anl.gov/profile/sven-leyffer" class="external-link">Sven Leyffer</a>.</p>
+  <p>Developed by <a href="https://naras.su.domains" class="external-link">Balasubramanian Narasimhan</a>, <a href="https://cvanaret.wordpress.com/" class="external-link">Charlie Vanaret</a>.</p>
 </div>
 
 <div class="pkgdown-footer-right">

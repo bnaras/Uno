@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">Uno</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.7.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.9.2-1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -35,16 +35,28 @@
       <h2>Authors</h2>
 
       <ul class="list-unstyled"><li>
-          <p><strong><a href="https://naras.su.domains" class="external-link">Balasubramanian Narasimhan</a></strong>. Author, maintainer.
-          </p>
+          <p><strong><a href="https://naras.su.domains" class="external-link">Balasubramanian Narasimhan</a></strong>. Author, maintainer, copyright holder.
+          <br><small>R package: R/, src/uno_binding.cpp, src/dmumps_shim.c, build scripts</small></p>
         </li>
         <li>
           <p><strong><a href="https://cvanaret.wordpress.com/" class="external-link">Charlie Vanaret</a></strong>. Author, copyright holder.
-          <br><small>Designed and implemented Uno</small></p>
+          <br><small>Bundled Uno C++ solver (inst/uno, MIT); designed and implemented Uno</small></p>
         </li>
         <li>
-          <p><strong><a href="https://www.anl.gov/profile/sven-leyffer" class="external-link">Sven Leyffer</a></strong>. Author, copyright holder.
-          <br><small>Co-developed the Uno framework</small></p>
+          <p><strong>Alexis Montoison</strong>. Contributor, copyright holder.
+          <br><small>Uno C API (inst/uno/interfaces/C) and Fortran interface, MA86 interface</small></p>
+        </li>
+        <li>
+          <p><strong>Joris Gillis</strong>. Contributor, copyright holder.
+          <br><small>Uno dynamic loader (inst/uno/uno/tools/DynamicLoader.*)</small></p>
+        </li>
+        <li>
+          <p><strong>David Kiessling</strong>. Contributor, copyright holder.
+          <br><small>Uno funnel globalization method (inst/uno/uno/ingredients/glob/switching/funnel_methods)</small></p>
+        </li>
+        <li>
+          <p><strong>Manuel Schaich</strong>. Contributor, copyright holder.
+          <br><small>Uno MA27 interface (inst/uno/uno/ingredients/subproblem_solvers/MA27); compiled only when HSL is found</small></p>
         </li>
         <li>
           <p><strong>HiGHS development team</strong>. Copyright holder.
@@ -56,30 +68,16 @@
       <h2 id="citation">Citation</h2>
       <p><small class="dont-index">Source: <a href="https://github.com/bnaras/Uno/blob/master/inst/CITATION" class="external-link"><code>inst/CITATION</code></a></small></p>
 
-      <p>Narasimhan B, Vanaret C, Leyffer S (2026).
+      <p>Narasimhan B (2026).
 <em>Uno: R Interface to the Uno Nonlinear Optimization Solver</em>.
-R package version 2.7.4, <a href="https://github.com/bnaras/Uno" class="external-link">https://github.com/bnaras/Uno</a>.
+R package version 2.9.2-1, <a href="https://github.com/bnaras/Uno" class="external-link">https://github.com/bnaras/Uno</a>.
 </p>
       <pre>@Manual{,
   title = {{Uno}: R Interface to the Uno Nonlinear Optimization Solver},
-  author = {Balasubramanian Narasimhan and Charlie Vanaret and Sven Leyffer},
+  author = {Balasubramanian Narasimhan},
   year = {2026},
-  note = {R package version 2.7.4},
+  note = {R package version 2.9.2-1},
   url = {https://github.com/bnaras/Uno},
-}</pre>
-      <p>Vanaret C, Leyffer S (2024).
-“Implementing a unified solver for nonlinearly constrained optimization.”
-<a href="https://doi.org/10.48550/arXiv.2406.13454" class="external-link">doi:10.48550/arXiv.2406.13454</a>.
-2406.13454.
-</p>
-      <pre>@Misc{,
-  title = {Implementing a unified solver for nonlinearly constrained optimization},
-  author = {Charlie Vanaret and Sven Leyffer},
-  year = {2024},
-  doi = {10.48550/arXiv.2406.13454},
-  eprint = {2406.13454},
-  archiveprefix = {arXiv},
-  primaryclass = {math.OC},
 }</pre>
     </div>
 
@@ -88,7 +86,7 @@ R package version 2.7.4, <a href="https://github.com/bnaras/Uno" class="external
 
 
     <footer><div class="pkgdown-footer-left">
-  <p>Developed by <a href="https://naras.su.domains" class="external-link">Balasubramanian Narasimhan</a>, <a href="https://cvanaret.wordpress.com/" class="external-link">Charlie Vanaret</a>, <a href="https://www.anl.gov/profile/sven-leyffer" class="external-link">Sven Leyffer</a>.</p>
+  <p>Developed by <a href="https://naras.su.domains" class="external-link">Balasubramanian Narasimhan</a>, <a href="https://cvanaret.wordpress.com/" class="external-link">Charlie Vanaret</a>.</p>
 </div>
 
 <div class="pkgdown-footer-right">

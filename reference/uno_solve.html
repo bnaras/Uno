@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">Uno</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.7.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.9.2-1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -64,7 +64,8 @@
 <span>  lagrangian_sign <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"negative"</span>, <span class="st">"positive"</span><span class="op">)</span>,</span>
 <span>  dual0 <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  iter_callback <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  log_callback <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  log_callback <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  name <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -137,9 +138,10 @@ point, using MUMPS as the linear solver).</p></dd>
 
 <dt id="arg-options">options<a class="anchor" aria-label="anchor" href="#arg-options"></a></dt>
 <dd><p>a named list of Uno solver options applied AFTER the preset
-(so they override it), e.g. `list(max_iterations = 200L, tolerance = 1e-8,
-linear_solver = "MUMPS")`. Each value is coerced to the option's declared
-Uno type; an unknown option name or an unacceptable value raises an error.</p></dd>
+(so they override it), e.g. `list(max_iterations = 200L,
+primal_tolerance = 1e-8, linear_solver = "MUMPS")`; [uno_options()] lists
+them. Each value is coerced to the option's declared Uno type; an unknown
+option name or an unacceptable value raises an error.</p></dd>
 
 
 <dt id="arg-lagrangian-sign">lagrangian_sign<a class="anchor" aria-label="anchor" href="#arg-lagrangian-sign"></a></dt>
@@ -167,8 +169,14 @@ as "do not terminate". `NULL` disables it.</p></dd>
 
 <dt id="arg-log-callback">log_callback<a class="anchor" aria-label="anchor" href="#arg-log-callback"></a></dt>
 <dd><p>optional `function(text)` that receives Uno's output
-stream in chunks (a sink for the solver log); `NULL` leaves output on
-stdout. Independent of `verbose` (which controls how much Uno prints).</p></dd>
+stream in chunks (a sink for the solver log); `NULL` sends Uno's output to
+the R console. Independent of `verbose` (which controls how much Uno
+prints).</p></dd>
+
+
+<dt id="arg-name">name<a class="anchor" aria-label="anchor" href="#arg-name"></a></dt>
+<dd><p>optional model name (a string) shown in Uno's log; `NULL` for
+Uno's default.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -176,10 +184,23 @@ stdout. Independent of `verbose` (which controls how much Uno prints).</p></dd>
     <p>a named list. The `optimization_status` and `solution_status` are
   **named integers** of the form `c(SUCCESS = 0L)`: the value is Uno's enum
   code and the name is its canonical label, so you can key a status map by
-  `names(status)` and still read the code (e.g. `status[[1L]]`). The list
-  also holds the objective, primal and dual solutions (`constraint_dual`,
+  `names(status)` and still read the code (e.g. `status[[1L]]`). The labels
+  are those of Uno's C API (see [uno_status_labels()]). The list also holds
+  the objective, primal and dual solutions (`constraint_dual`,
   `lower_bound_dual`, `upper_bound_dual`), KKT residuals, and per-callback
   evaluation counters.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="interrupting-a-solve">Interrupting a solve<a class="anchor" aria-label="anchor" href="#interrupting-a-solve"></a></h2>
+
+
+<p>Uno installs its own `SIGINT` handler for the duration of a solve: a
+  Ctrl-C stops the solve cleanly at the next iteration with
+  `optimization_status` `USER_INTERRUPTION`, and R's handler is restored
+  afterwards. Uno resets `SIGINT` to the default action after the first
+  Ctrl-C, so a second Ctrl-C before the solve returns terminates the R
+  process. An interrupt that arrives inside a MUMPS factorization is caught
+  by <span class="pkg">rmumps</span> (version 5.2.1-44 or later) and reported the same way.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
@@ -187,7 +208,7 @@ stdout. Independent of `verbose` (which controls how much Uno prints).</p></dd>
 
 
     <footer><div class="pkgdown-footer-left">
-  <p>Developed by <a href="https://naras.su.domains" class="external-link">Balasubramanian Narasimhan</a>, <a href="https://cvanaret.wordpress.com/" class="external-link">Charlie Vanaret</a>, <a href="https://www.anl.gov/profile/sven-leyffer" class="external-link">Sven Leyffer</a>.</p>
+  <p>Developed by <a href="https://naras.su.domains" class="external-link">Balasubramanian Narasimhan</a>, <a href="https://cvanaret.wordpress.com/" class="external-link">Charlie Vanaret</a>.</p>
 </div>
 
 <div class="pkgdown-footer-right">

@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">Uno</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.7.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.9.2-1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -33,6 +33,23 @@
     </div>
 
     <div class="section level2">
+<h2 class="pkg-version" data-toc-text="2.9.2-1" id="uno-292-1">Uno 2.9.2-1<a class="anchor" aria-label="anchor" href="#uno-292-1"></a></h2>
+<ul><li><p>Updated the bundled Uno C++ solver from 2.7.4 to upstream release 2.9.2. Uno 2.9 adds the <code>auto</code> preset (chosen by problem size), function scaling for all methods, a Ctrl-C handler that stops a solve cleanly with the new <code>USER_INTERRUPTION</code> status, and two solution statuses: <code>DIVERGING_ITERATE</code> and <code>UNBOUNDED_OBJECTIVE</code> (which replaces <code>UNBOUNDED</code>). The R-packaging patch set was rebased onto v2.9.2.</p></li>
+<li><p>Updated the bundled HiGHS from 1.14.0 to 1.15.1, the version in the CRAN <code>highs</code> package, with two upstream fixes not yet in a HiGHS release: ERGO-Code/HiGHS#3430 (uninitialized <code>bool</code> members, reported by UBSAN on every QP solve) and <a href="https://github.com/bnaras/Uno/issues/3472" class="external-link">#3472</a> (a container overflow in presolve, reported by AddressSanitizer), the latter moved to its 1.15.1 location. HiGHS’s <code>extern/</code> extras library is not built: it serves only the HiPO solver, which is off.</p></li>
+<li><p>The status labels <code><a href="../reference/uno_solve.html">uno_solve()</a></code> returns are now generated from Uno’s C API header at install time, so they follow the bundled Uno exactly; <code><a href="../reference/uno_status_labels.html">uno_status_labels()</a></code> lists them.</p></li>
+<li><p>MUMPS through <code>rmumps</code>, two generations: with <code>rmumps</code> 5.2.1-44 or later the package binds to the versioned C interface <code>&lt;rmumps/rmumps_api.h&gt;</code>, whose entry points are named after the MUMPS structure layout they were built for, so a mismatch between the <code>rmumps</code> a binary was built against and the one installed is a clear error when the package loads rather than memory corruption; <code>rmumps</code> 5.9.1-1 brings MUMPS 5.9.1 this way. With <code>rmumps</code> 5.2.1-43 the legacy <code>dmumps_c</code> entry point is used as before. The binding happens in <code>.onLoad</code>. <code><a href="../reference/uno_mumps_version.html">uno_mumps_version()</a></code> reports the MUMPS reached.</p></li>
+<li><p>New: <code><a href="../reference/uno_options.html">uno_options()</a></code> lists every Uno option with its type; <code><a href="../reference/uno_solve.html">uno_solve()</a></code> gains a <code>name</code> argument (the model name in Uno’s log) and validates the preset; without a <code>log_callback</code>, Uno’s output now goes to the R console through an explicit logger sink.</p></li>
+<li><p>Fixed <code>log_callback</code>, which received Uno’s preamble twice and never the iteration table or the final summary: Uno’s stream buffer expects the callback to return the number of bytes it consumed, and the binding returned 0, which Uno treats as a failed flush. The callback now receives the whole log, once.</p></li>
+<li><p><code>citation("Uno")</code> now gives a single entry for the R package and points to the references the Uno authors maintain for the solver; the package description cites the published Mathematical Programming Computation paper (Vanaret and Leyffer, 2026) instead of the preprint.</p></li>
+<li><p>Authorship and copyright: <code>Authors@R</code> names every copyright holder of the bundled Uno sources (Alexis Montoison, Joris Gillis, David Kiessling and Manuel Schaich alongside Charlie Vanaret), the package’s own code is attributed to its author, and <code>inst/COPYRIGHTS</code> is self-contained after installation. Uno’s documentation, test suite, AMPL interface, examples and CMake find-modules, none of which the build reads, no longer ship in the source package.</p></li>
+<li><p>Build: Uno is configured with <code>-DUSE_OPENMP=OFF</code> (Uno 2.7.5 made OpenMP the default, which its CMake requires whenever MUMPS is present). The bundled Uno’s CMake gains a <code>FORTRAN_MANGLING_UNDERSCORE</code> option, which the package turns on: BLAS/LAPACK symbol names are spelled with the gfortran convention R uses everywhere instead of being discovered by compiling and linking a Fortran probe, so installing no longer needs a working Fortran link step (nothing in the build is Fortran; R supplies BLAS, LAPACK and the Fortran runtime at link time). For the same reason R’s BLAS and LAPACK link names are handed to Uno’s CMake directly instead of letting it search for libraries the archive never links (the search failed on Rtools without a Fortran compiler). The bundled Uno’s <code>DynamicLoader.cpp</code> includes <code>&lt;cstdlib&gt;</code> for <code>std::getenv</code>, which LLVM 23’s libc++ no longer provides transitively (CRAN’s <code>r-devel-linux-x86_64-fedora-clang</code>); the 2.7.4-1 fix of <code>VectorView.hpp</code> is moot, that file is gone upstream.</p></li>
+<li><p>Fixed an installation failure on glibc 2.36 and older (Debian 12, Ubuntu 22.04 LTS, RHEL 9), where the bundled HiGHS build stopped.</p></li>
+</ul></div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="2.7.4-1" id="uno-274-1">Uno 2.7.4-1<a class="anchor" aria-label="anchor" href="#uno-274-1"></a></h2><p class="text-muted">CRAN release: 2026-08-30</p>
+<ul><li>Fixed a compilation failure with LLVM 23’s libc++, reported by CRAN’s <code>r-devel-linux-x86_64-fedora-clang</code> check. libc++ 23 dropped many transitive includes in all language modes, so the bundled Uno solver’s <code>VectorView.hpp</code> no longer saw <code>&lt;algorithm&gt;</code> and its use of <code>std::fill</code> failed to compile, taking 28 translation units with it. The header now includes <code>&lt;algorithm&gt;</code> directly. No user-visible change.</li>
+</ul></div>
+    <div class="section level2">
 <h2 class="pkg-version" data-toc-text="2.7.4" id="uno-274">Uno 2.7.4<a class="anchor" aria-label="anchor" href="#uno-274"></a></h2><p class="text-muted">CRAN release: 2026-06-17</p>
 <ul><li><p>Fixed the interior-point (“ipopt”) preset on Windows, which failed with “The linear solver MUMPS is unknown”. The shim now resolves rmumps’ <code>dmumps_c</code> via <code>R_GetCCallable</code> (works on Windows) instead of <code>R_FindSymbol</code> (did not), and <code>configure.win</code> builds with MUMPS enabled. Requires <code>rmumps &gt;= 5.2.1-43</code>.</p></li>
 <li><p>Updated the bundled Uno C++ solver to upstream release 2.7.4. The R-packaging patch set rebased cleanly; the C API is backward-compatible and the R binding is unchanged.</p></li>
@@ -54,7 +71,7 @@
 
 
     <footer><div class="pkgdown-footer-left">
-  <p>Developed by <a href="https://naras.su.domains" class="external-link">Balasubramanian Narasimhan</a>, <a href="https://cvanaret.wordpress.com/" class="external-link">Charlie Vanaret</a>, <a href="https://www.anl.gov/profile/sven-leyffer" class="external-link">Sven Leyffer</a>.</p>
+  <p>Developed by <a href="https://naras.su.domains" class="external-link">Balasubramanian Narasimhan</a>, <a href="https://cvanaret.wordpress.com/" class="external-link">Charlie Vanaret</a>.</p>
 </div>
 
 <div class="pkgdown-footer-right">

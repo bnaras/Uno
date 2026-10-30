@@ -13,16 +13,17 @@ as the nonlinear (DNLP) solver backend for
 ``` r
 
 uno_version()
-#> [1] "2.7.4"
+#> [1] "2.9.2"
 ```
 
 Two solver paths are available, selected with the `preset` argument:
 
 - **`ipopt`** — an interior-point method whose symmetric-indefinite KKT
   systems are factored by **MUMPS**, reached at run time through the
-  [rmumps](https://cran.r-project.org/package=rmumps) package. It
-  handles indefiniteness (nonconvex problems) through inertia
-  correction.
+  [rmumps](https://cran.r-project.org/package=rmumps) package
+  ([`uno_mumps_version()`](https://bnaras.github.io/Uno/reference/uno_mumps_version.md)
+  reports which MUMPS). It handles indefiniteness (nonconvex problems)
+  through inertia correction.
 - **`filtersqp`** — a filter SQP method whose QP subproblems are solved
   by **HiGHS** (built from source with this package). HiGHS solves
   *convex* QPs, so this preset is the right choice for convex problems.
@@ -477,9 +478,9 @@ the option’s declared type and applied after the preset:
 
 ``` r
 
-# cap the iteration count and tighten the tolerance
+# cap the iteration count and tighten the primal tolerance
 uno_solve(..., preset = "ipopt",
-          options = list(max_iterations = 200L, tolerance = 1e-8))
+          options = list(max_iterations = 200L, primal_tolerance = 1e-8))
 
 # pick the linear solver explicitly, and silence output
 uno_solve(..., preset = "ipopt",
@@ -488,6 +489,22 @@ uno_solve(..., preset = "ipopt",
 
 An unknown option name, or a value the option rejects, raises an error
 rather than being silently ignored.
+[`uno_options()`](https://bnaras.github.io/Uno/reference/uno_options.md)
+lists every option of the linked Uno with its declared type:
+
+``` r
+
+head(uno_options(), 8)
+#>                                                  name    type
+#> 51                     acceptable_iteration_threshold integer
+#> 73              acceptable_objective_change_tolerance  double
+#> 81                               acceptable_tolerance  double
+#> 74      acceptable_unscaled_complementarity_tolerance  double
+#> 62 acceptable_unscaled_primal_infeasibility_tolerance  double
+#> 91         acceptable_unscaled_stationarity_tolerance  double
+#> 92                           armijo_decrease_fraction  double
+#> 93                                   armijo_tolerance  double
+```
 
 ## Monitoring and early termination
 
@@ -531,7 +548,7 @@ names(mon$optimization_status)
 length(stationarity)                                 # one entry per acceptable iterate
 #> [1] 21
 signif(range(stationarity), 3)                       # residual shrinks toward 0
-#> [1] 3.73e-10 2.60e+01
+#> [1] 1.73e-10 1.20e+01
 ```
 
 Returning `TRUE` stops the solve. For example, to bail out after five

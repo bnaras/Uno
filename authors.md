@@ -3,15 +3,27 @@
 ## Authors
 
 - **[Balasubramanian Narasimhan](https://naras.su.domains)**. Author,
-  maintainer.
+  maintainer, copyright holder.  
+  R package: R/, src/uno_binding.cpp, src/dmumps_shim.c, build scripts
 
 - **[Charlie Vanaret](https://cvanaret.wordpress.com/)**. Author,
   copyright holder.  
-  Designed and implemented Uno
+  Bundled Uno C++ solver (inst/uno, MIT); designed and implemented Uno
 
-- **[Sven Leyffer](https://www.anl.gov/profile/sven-leyffer)**. Author,
-  copyright holder.  
-  Co-developed the Uno framework
+- **Alexis Montoison**. Contributor, copyright holder.  
+  Uno C API (inst/uno/interfaces/C) and Fortran interface, MA86
+  interface
+
+- **Joris Gillis**. Contributor, copyright holder.  
+  Uno dynamic loader (inst/uno/uno/tools/DynamicLoader.\*)
+
+- **David Kiessling**. Contributor, copyright holder.  
+  Uno funnel globalization method
+  (inst/uno/uno/ingredients/glob/switching/funnel_methods)
+
+- **Manuel Schaich**. Contributor, copyright holder.  
+  Uno MA27 interface (inst/uno/uno/ingredients/subproblem_solvers/MA27);
+  compiled only when HSL is found
 
 - **HiGHS development team**. Copyright holder.  
   Bundled HiGHS LP/QP/MIP solver (MIT); see inst/COPYRIGHTS
@@ -21,29 +33,13 @@
 Source:
 [`inst/CITATION`](https://github.com/bnaras/Uno/blob/master/inst/CITATION)
 
-Narasimhan B, Vanaret C, Leyffer S (2026). *Uno: R Interface to the Uno
-Nonlinear Optimization Solver*. R package version 2.7.4,
-<https://github.com/bnaras/Uno>.
+Narasimhan B (2026). *Uno: R Interface to the Uno Nonlinear Optimization
+Solver*. R package version 2.9.2-1, <https://github.com/bnaras/Uno>.
 
     @Manual{,
       title = {{Uno}: R Interface to the Uno Nonlinear Optimization Solver},
-      author = {Balasubramanian Narasimhan and Charlie Vanaret and Sven Leyffer},
+      author = {Balasubramanian Narasimhan},
       year = {2026},
-      note = {R package version 2.7.4},
+      note = {R package version 2.9.2-1},
       url = {https://github.com/bnaras/Uno},
-    }
-
-Vanaret C, Leyffer S (2024). “Implementing a unified solver for
-nonlinearly constrained optimization.”
-[doi:10.48550/arXiv.2406.13454](https://doi.org/10.48550/arXiv.2406.13454).
-2406.13454.
-
-    @Misc{,
-      title = {Implementing a unified solver for nonlinearly constrained optimization},
-      author = {Charlie Vanaret and Sven Leyffer},
-      year = {2024},
-      doi = {10.48550/arXiv.2406.13454},
-      eprint = {2406.13454},
-      archiveprefix = {arXiv},
-      primaryclass = {math.OC},
     }
