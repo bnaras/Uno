@@ -7,6 +7,14 @@
   and `UNBOUNDED_OBJECTIVE` (which replaces `UNBOUNDED`). The R-packaging patch
   set was rebased onto v2.9.2.
 
+* Updated the bundled HiGHS from 1.14.0 to 1.15.1, the version in the CRAN
+  `highs` package, with two upstream fixes not yet in a HiGHS release:
+  ERGO-Code/HiGHS#3430 (uninitialized `bool` members, reported by UBSAN on
+  every QP solve) and #3472 (a container overflow in presolve, reported by
+  AddressSanitizer), the latter moved to its 1.15.1 location. HiGHS's
+  `extern/` extras library is not built: it serves only the HiPO solver,
+  which is off.
+
 * The status labels `uno_solve()` returns are now generated from Uno's C API
   header at install time, so they follow the bundled Uno exactly;
   `uno_status_labels()` lists them.

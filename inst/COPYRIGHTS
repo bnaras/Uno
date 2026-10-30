@@ -112,11 +112,11 @@ Boost Software License 1.0); none is copyleft.
      Catch2 -- C++ test framework (used by HiGHS's own tests; not linked
        into the package library)
        Boost Software License 1.0.
-       inst/HiGHS/extern/LICENCE_1_0.txt
+       inst/HiGHS/extern/catch/LICENCE_1_0.txt
 
      CLI11 -- command-line parser (used by the HiGHS standalone app only;
        not linked into the package library)
-       BSD-3-Clause. Header: inst/HiGHS/extern/CLI11.hpp
+       BSD-3-Clause. Header: inst/HiGHS/extern/cli11/CLI11.hpp
 
 
 Components NOT bundled

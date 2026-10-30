@@ -5,4 +5,4 @@
 [submodule "src/HiGHS"]
 	path = inst/HiGHS
 	url = https://github.com/bnaras/HiGHS.git
-	branch = r-pkg
+	branch = r-pkg-1.15.1
