@@ -1,7 +1,5 @@
 ^uno_build$
-^highs_build$
 ^src/unolib$
-^src/highslib$
 ^src/Makevars$
 ^src/Makevars\.win$
 ^src/uno_status_names\.h$
@@ -15,9 +13,7 @@
 ^docs$
 ^pkgdown$
 ^\.github$
-^inst/HiGHS/\.
 ^inst/uno/\.
-^inst/HiGHS/CITATION\.cff$
 ^inst/uno/CITATION\.cff$
 ^inst/uno/interfaces/R$
 ^inst/uno/interfaces/Python$

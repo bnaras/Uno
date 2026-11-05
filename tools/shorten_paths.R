@@ -51,7 +51,7 @@ read_map <- function() {
 ## approximation; the authoritative gate is R CMD check's portable-paths check.
 tarball_files <- function() {
   all <- list.files(".", recursive = TRUE, all.files = FALSE, no.. = TRUE)
-  drop <- "(^|/)(\\.git|highs_build|uno_build|highslib|unolib)(/|$)|\\.(o|so|a)$"
+  drop <- "(^|/)(\\.git|uno_build|unolib)(/|$)|\\.(o|so|a)$"
   keep <- !grepl(drop, all)
   if (file.exists(".Rbuildignore")) {
     pats <- readLines(".Rbuildignore", warn = FALSE)

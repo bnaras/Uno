@@ -2,7 +2,3 @@
 	path = inst/uno
 	url = https://github.com/bnaras/Uno_source.git
 	branch = r-pkg-2.9.2
-[submodule "src/HiGHS"]
-	path = inst/HiGHS
-	url = https://github.com/bnaras/HiGHS.git
-	branch = r-pkg-1.15.1

@@ -38,8 +38,9 @@ Two solver paths are available, selected with the `preset` argument:
   (`uno_mumps_version()` reports which MUMPS). It handles indefiniteness
   (nonconvex problems) through inertia correction.
 * **`filtersqp`** — a filter SQP method whose QP subproblems are solved by
-  **HiGHS** (built from source with this package). HiGHS solves *convex* QPs, so
-  this preset is the right choice for convex problems.
+  **HiGHS**, reached at run time through the
+  [highs](https://cran.r-project.org/package=highs) package. HiGHS solves
+  *convex* QPs, so this preset is the right choice for convex problems.
 
 We provide some examples to illustrate how the
 **callbacks** and their **sparsity structures** fit together.

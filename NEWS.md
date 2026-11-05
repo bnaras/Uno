@@ -1,3 +1,23 @@
+# Uno 2.9.2-2
+
+* HiGHS is no longer bundled. The SQP presets reach HiGHS at run time through
+  the `highs` package (>= 1.15.1-2), which exports HiGHS' C API to other
+  packages, the way MUMPS is reached through `rmumps`: Uno's HiGHS backend
+  now speaks the C API and is compiled against the header `highs` installs;
+  nothing of HiGHS is compiled or linked here. The source package shrinks
+  from 2.6 MB to 0.6 MB and the installed library from 5.8 MB to 1.7 MB,
+  installation is faster, and the package no longer carries a copy of a
+  solver CRAN already ships. The HiGHS development team leaves `Authors@R`
+  accordingly. `highs` is an `Imports` dependency.
+
+* This also fixes the installation failure on musl-based Linux (e.g. Alpine)
+  that CRAN's additional checks reported for 2.9.2-1: it was in the bundled
+  HiGHS's console-output plumbing, which is gone with the bundle.
+
+* Build: the `-DUSE_OPENMP=OFF` setting is kept, with its reason corrected:
+  Uno's own sources use no OpenMP; the option only adds an OpenMP requirement
+  for a system MUMPS or SPRAL, neither of which the R build uses.
+
 # Uno 2.9.2-1
 
 * Updated the bundled Uno C++ solver from 2.7.4 to upstream release 2.9.2. Uno

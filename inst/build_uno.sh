@@ -7,11 +7,10 @@
 #
 # Modeled on inst/build_highs.sh (highs R package) and inst/build_scip.sh
 # (scip R package). The Uno C++ source is vendored as a git submodule at
-# inst/uno; HiGHS at inst/HiGHS.
-#
-# Milestone A: builds uno_static WITHOUT any subproblem solver (no HiGHS),
-# enough to validate the packaging chain and the uno_version() smoke binding.
-# HiGHS wiring (-DHIGHS=...) is layered on in a later milestone.
+# inst/uno. Nothing else is bundled: HiGHS (QP/LP subproblems) and MUMPS
+# (interior-point KKT systems) are compiled against the headers the 'highs'
+# and 'rmumps' packages install and reached at run time through the
+# C-callables those packages register (HIGHS_OPTS / MUMPS_OPTS below).
 #
 # NOTE: do not use `set -e` here. The `which cmake4 || which cmake` fallback
 # pattern assigns a failing command substitution inside an if-branch, which
@@ -57,7 +56,7 @@ export CFLAGS="${CFLAGS} ${CPPFLAGS}"
 export CXXFLAGS="${CXXFLAGS} ${CPPFLAGS}"
 export LDFLAGS=`"${R_HOME}/bin/R" CMD config LDFLAGS`
 
-# R-package console-I/O redirection (mirror of build_highs.sh's HIGHS_R_PRINT).
+# R-package console-I/O redirection (same idea as the highs package's HIGHS_R_PRINT).
 # uno/tools/r_io.h (#ifdef UNO_R_PRINT, pulled in via Logger.hpp and the few
 # files using std::cout) routes std::cout/std::cerr to R's console through a
 # streambuf over Rprintf/REprintf, so the std::cout symbol never appears in
@@ -107,23 +106,17 @@ if test -n "${CCACHE_EXE}"; then
 fi
 
 #
-# Optional HiGHS (Milestone B): if HIGHS_LIB is exported (path to libhighs.a),
-# pre-seed the find_library(HIGHS) cache and add HAS_HIGHS to the build.
+# Optional HiGHS via the R 'highs' package: if HIGHS_R_INCLUDE_DIRS is exported
+# (by ./configure, pointing at the directory of highs' highs_ccallable.h),
+# enable Uno's HiGHS QP/LP solver in HEADER-ONLY mode -- compile the backend
+# against the C API names that header provides and link NO HiGHS library.
+# Each entry point is bound at run time through R_GetCCallable (see the
+# HIGHS_VIA_R branch of Uno's CMakeLists.txt and HiGHSCApi.hpp).
 #
 HIGHS_OPTS=""
-if test -n "${HIGHS_LIB}"; then
-    HIGHS_OPTS="-DHIGHS=${HIGHS_LIB}"
-    echo "HiGHS: ${HIGHS_LIB}"
-    # Uno's CMake adds only ${HIGHS_DIRECTORY}/../include/highs to the include
-    # path (CMakeLists.txt, find_library(HIGHS) branch). That satisfies the
-    # quote-include "Highs.h" (HiGHSWorkspace.hpp) but NOT the bracket-include
-    # <highs/Highs.h> that Uno 2.7.4 introduced in HiGHSSolver.hpp, which needs
-    # the include ROOT on the search path. Put BOTH on the Uno compile flags so
-    # the bundled static library builds regardless of include style (mirrors how
-    # UNO_RIO_FLAGS above is injected through CXXFLAGS for the CMake build).
-    HIGHS_INC_ROOT="$(dirname "$(dirname "${HIGHS_LIB}")")/include"
-    export CFLAGS="${CFLAGS} -I${HIGHS_INC_ROOT} -I${HIGHS_INC_ROOT}/highs"
-    export CXXFLAGS="${CXXFLAGS} -I${HIGHS_INC_ROOT} -I${HIGHS_INC_ROOT}/highs"
+if test -n "${HIGHS_R_INCLUDE_DIRS}"; then
+    HIGHS_OPTS="-DHIGHS_VIA_R:bool=ON -DHIGHS_R_INCLUDE_DIRS=${HIGHS_R_INCLUDE_DIRS}"
+    echo "HiGHS (highs package headers): ${HIGHS_R_INCLUDE_DIRS}"
 fi
 
 #
@@ -171,9 +164,11 @@ test -n "${UNO_LAPACK_LIBRARIES}" || UNO_LAPACK_LIBRARIES="-llapack"
 echo "BLAS_LIBRARIES (to Uno's CMake):   '${UNO_BLAS_LIBRARIES}'"
 echo "LAPACK_LIBRARIES (to Uno's CMake): '${UNO_LAPACK_LIBRARIES}'"
 
-# USE_OPENMP: ON by default since Uno 2.7.5, and Uno's CMake then requires
-# OpenMP whenever MUMPS is found; the R build is sequential (no OpenMP in R's
-# toolchain on macOS, and CRAN limits installs to two cores), so turn it off.
+# USE_OPENMP: ON by default since Uno 2.7.5. Uno's own sources use no OpenMP;
+# the option only adds find_package(OpenMP REQUIRED) for a system MUMPS (not
+# this build: MUMPS comes from rmumps, MUMPS_VIA_R) or for a SPRAL found on
+# the machine. The R build is sequential (no OpenMP in R's toolchain on macOS,
+# and CRAN limits installs to two cores), so keep it off.
 #
 # FORTRAN_MANGLING_UNDERSCORE: Uno's CMake otherwise compiles and links a
 # Fortran probe just to learn how BLAS/LAPACK symbols are spelled. Nothing in
@@ -217,9 +212,9 @@ ${MAKE} -j"${UNO_BUILD_JOBS:-2}" install || exit 1
 
 cd "${R_UNO_PKG_HOME}"
 
-# Uno (like HiGHS) may install into lib/ or lib64/; normalize to lib/ so the
+# Uno's CMake may install into lib/ or lib64/; normalize to lib/ so the
 # Makevars `-L${UNO_INSTALL_DIR}/lib -luno` link path is correct on multilib
-# distros (Fedora/RHEL put 64-bit static libs in lib64/).  Mirrors build_highs.sh.
+# distros (Fedora/RHEL put 64-bit static libs in lib64/).
 if test ! -f "${UNO_INSTALL_DIR}/lib/libuno.a" && test -f "${UNO_INSTALL_DIR}/lib64/libuno.a"; then
     mkdir -p "${UNO_INSTALL_DIR}/lib"
     cp "${UNO_INSTALL_DIR}/lib64/libuno.a" "${UNO_INSTALL_DIR}/lib/"

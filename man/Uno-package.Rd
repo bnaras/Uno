@@ -8,10 +8,11 @@
 \description{
 R bindings to \href{https://github.com/cvanaret/Uno}{Uno} (Unifying Nonlinear
 Optimization), a C++ solver for nonlinearly constrained optimization, via
-Uno's C API. The HiGHS QP/LP subproblem solver is built from source for the
-SQP presets; the MUMPS linear solver used by the interior-point preset is
-reached at run time through the \pkg{rmumps} package (bound when the
-namespace loads; see \code{\link{uno_mumps_version}}). Intended as a
+Uno's C API. The HiGHS QP/LP subproblem solver used by the SQP presets is
+reached at run time through the \pkg{highs} package, and the MUMPS linear
+solver used by the interior-point preset through the \pkg{rmumps} package
+(both bound when the namespace loads; see
+\code{\link{uno_mumps_version}}). Intended as a
 nonlinear (DNLP) backend for \pkg{CVXR}; this is the R analog of the
 \code{unopy} Python package.
 }
@@ -22,18 +23,20 @@ nonlinear (DNLP) backend for \pkg{CVXR}; this is the R analog of the
   linked Uno accepts and returns.
 }
 \author{
-\strong{Maintainer}: Balasubramanian Narasimhan \email{naras@stanford.edu}
+\strong{Maintainer}: Balasubramanian Narasimhan \email{naras@stanford.edu} (R package: R/, src/uno_binding.cpp, src/dmumps_shim.c, build scripts) [copyright holder]
 
 Authors:
 \itemize{
-  \item Balasubramanian Narasimhan \email{naras@stanford.edu}
-  \item Charlie Vanaret (Designed and implemented Uno) [copyright holder]
-  \item Sven Leyffer (Co-developed the Uno framework) [copyright holder]
+  \item Balasubramanian Narasimhan \email{naras@stanford.edu} (R package: R/, src/uno_binding.cpp, src/dmumps_shim.c, build scripts) [copyright holder]
+  \item Charlie Vanaret (Bundled Uno C++ solver (inst/uno, MIT); designed and implemented Uno) [copyright holder]
 }
 
 Other contributors:
 \itemize{
-  \item HiGHS development team (Bundled HiGHS LP/QP/MIP solver (MIT); see inst/COPYRIGHTS) [copyright holder]
+  \item Alexis Montoison (Uno C API (inst/uno/interfaces/C) and Fortran interface, MA86 interface) [contributor, copyright holder]
+  \item Joris Gillis (Uno dynamic loader (inst/uno/uno/tools/DynamicLoader.*)) [contributor, copyright holder]
+  \item David Kiessling (Uno funnel globalization method (inst/uno/uno/ingredients/glob/switching/funnel_methods)) [contributor, copyright holder]
+  \item Manuel Schaich (Uno MA27 interface (inst/uno/uno/ingredients/subproblem_solvers/MA27); compiled only when HSL is found) [contributor, copyright holder]
 }
 
 }

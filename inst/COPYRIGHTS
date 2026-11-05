@@ -2,22 +2,21 @@ Uno R package -- copyright and licensing of bundled code
 ========================================================
 
 Scope. This file describes the SOURCE package (the tarball). The bundled
-sources under inst/uno/ and inst/HiGHS/ are compiled into the package library
-at installation time and are then removed from the installed package (see
-.Rinstignore), so an installed copy of this file is self-contained: it quotes
-each copyright statement and names the license, and the MIT text referred to
-below is the one in the package's own LICENSE file (identical to the MIT text
-every bundled MIT component carries).
+sources under inst/uno/ are compiled into the package library at installation
+time and are then removed from the installed package (see .Rinstignore), so an
+installed copy of this file is self-contained: it quotes each copyright
+statement and names the license, and the MIT text referred to below is the one
+in the package's own LICENSE file (identical to the MIT text the bundled
+component carries).
 
 The Uno R package itself -- the R code, src/uno_binding.cpp, src/dmumps_shim.c,
-src/dmumps_shim.h, the configure scripts, inst/build_*.sh, tools/, the vignette
-and the documentation -- is Copyright (c) 2026 Balasubramanian Narasimhan and
-is released under the MIT License (file LICENSE).
+src/dmumps_shim.h, the configure scripts, inst/build_uno.sh, tools/, the
+vignette and the documentation -- is Copyright (c) 2026 Balasubramanian
+Narasimhan and is released under the MIT License (file LICENSE).
 
 For convenience the package builds and statically links the following
-third-party libraries from bundled source. Every bundled component is under a
-permissive, MIT-compatible license (MIT, BSD-3-Clause, Apache-2.0, zlib, or the
-Boost Software License 1.0); none is copyleft.
+third-party library from bundled source. It is under the MIT license; nothing
+bundled is copyleft.
 
 
 1. Uno (C++ nonlinear optimization solver) -- inst/uno/
@@ -64,8 +63,10 @@ Boost Software License 1.0); none is copyleft.
    package (.Rbuildignore); nothing in the package build reads them.
 
    Fork additions. inst/uno/uno/tools/r_io.h and the UNO_R_PRINT console
-   plumbing were written for this package (Balasubramanian Narasimhan) and
-   carry Uno's header so that the tree stays uniform; they are not upstream.
+   plumbing, and inst/uno/uno/ingredients/subproblem_solvers/HiGHS/HiGHSCApi.hpp
+   (the HiGHS backend's C-API indirection), were written for this package
+   (Balasubramanian Narasimhan) and carry Uno's license so that the tree stays
+   uniform; they are not upstream.
 
    Acknowledgments, not copyright holders: Sven Leyffer co-developed the
    unification framework Uno implements (Vanaret and Leyffer, 2026,
@@ -74,53 +75,15 @@ Boost Software License 1.0); none is copyleft.
    sources as taken from IPOPT and MadNLP (values only, no code).
 
 
-2. HiGHS (LP / QP / MIP solver) -- inst/HiGHS/
-   Copyright (c) HiGHS authors.
-   MIT License. Full text: inst/HiGHS/LICENSE.txt in the source package.
-
-   HiGHS in turn bundles, under inst/HiGHS/extern/ and
-   inst/HiGHS/highs/io/filereaderlp/:
-
-     AMD -- approximate minimum degree ordering
-       Copyright (c) 1996-2022 Timothy A. Davis, Patrick R. Amestoy,
-       and Iain S. Duff. BSD-3-Clause.
-       inst/HiGHS/extern/amd/License.txt
-
-     METIS -- graph partitioning
-       Copyright 1995-2013 Regents of the University of Minnesota.
-       Apache License 2.0.
-       inst/HiGHS/extern/metis/LICENSE.txt
-
-     pdqsort -- pattern-defeating quicksort
-       Copyright (c) 2021 Orson Peters. zlib License.
-       inst/HiGHS/extern/pdqsort/license.txt
-
-     zstr -- C++ zlib stream wrapper
-       Copyright (c) 2015 Matei David, Ontario Institute for Cancer Research.
-       MIT License.
-       inst/HiGHS/extern/zstr/LICENSE
-
-     rcm -- reverse Cuthill-McKee ordering
-       Copyright (c) 2005 Alan George, Joseph Liu, John Burkardt.
-       MIT License.
-       inst/HiGHS/extern/rcm/LICENSE
-
-     filereaderlp -- LP-format file reader
-       Copyright (c) 2020 Michael Feldmeier. MIT License.
-       inst/HiGHS/highs/io/filereaderlp/LICENSE
-
-     Catch2 -- C++ test framework (used by HiGHS's own tests; not linked
-       into the package library)
-       Boost Software License 1.0.
-       inst/HiGHS/extern/catch/LICENCE_1_0.txt
-
-     CLI11 -- command-line parser (used by the HiGHS standalone app only;
-       not linked into the package library)
-       BSD-3-Clause. Header: inst/HiGHS/extern/cli11/CLI11.hpp
-
-
 Components NOT bundled
 ----------------------
+
+HiGHS is NOT included in this package. The SQP presets (filtersqp, filterslp)
+reach HiGHS at run time through the separately installed 'highs' package
+(>= 1.15.1-2), via the C-callables highs registers: Uno's HiGHS backend is
+compiled against the header highs installs (<highs_ccallable.h>), which copies
+no HiGHS code into this package. HiGHS is MIT licensed; the 'highs' package
+states its own copyright holders.
 
 MUMPS is NOT included in this package. The interior-point preset reaches MUMPS
 at run time through the separately installed 'rmumps' package, via the

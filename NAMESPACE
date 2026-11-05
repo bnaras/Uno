@@ -8,6 +8,12 @@ useDynLib(Uno, .registration = TRUE)
 # namespace loads.
 importFrom(rmumps, Rmumps)
 
+# highs provides HiGHS' C API at run time (the C-callables it registers,
+# resolved through R_GetCCallable by <highs_ccallable.h>, against which Uno's
+# HiGHS QP/LP backend is compiled). Importing it ensures highs' namespace --
+# and thus its shared object -- is loaded whenever Uno's namespace loads.
+importFrom(highs, highs_solve)
+
 export(uno_version)
 export(uno_solve)
 export(uno_options)

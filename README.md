@@ -17,8 +17,9 @@ nonlinear (DNLP) solver backend for
 
 Two solver paths are provided:
 
-* the **`filtersqp`** SQP preset, whose QP subproblems are solved by **HiGHS**
-  (built from source with the package), and
+* the **`filtersqp`** SQP preset, whose QP subproblems are solved by **HiGHS**,
+  reached at run time through the
+  [highs](https://cran.r-project.org/package=highs) package, and
 * the **`ipopt`** interior-point preset, whose KKT systems are solved by
   **MUMPS**, reached at run time through the
   [rmumps](https://cran.r-project.org/package=rmumps) package
@@ -34,10 +35,12 @@ remotes::install_github("bnaras/Uno")
 ```
 
 A C++17 compiler and CMake (>= 3.16) are required for source builds as
-the package builds the underlying Uno and HiGHS from source. MUMPS
-comes from the `rmumps` dependency, so there is no separate MUMPS
-installation. A source build binds to the `rmumps` installed at the
-time: `rmumps` 5.2.1-44 or later through its versioned C interface
+the package builds the underlying Uno from source. HiGHS comes from the
+`highs` dependency (version 1.15.1-2 or later, which exports HiGHS' C
+API to other packages) and MUMPS from the `rmumps` dependency, so
+there is no separate HiGHS or MUMPS installation and nothing of either
+is compiled here. A source build binds to the `rmumps` installed at
+the time: `rmumps` 5.2.1-44 or later through its versioned C interface
 (`rmumps` 5.9.1-1 brings MUMPS 5.9.1), `rmumps` 5.2.1-43 through the
 legacy `dmumps_c` entry point.
 
@@ -93,6 +96,7 @@ and Montoison, 2026, *Journal of Open Source Software*,
 
 ## License
 
-MIT. The bundled Uno solver is Copyright Charlie Vanaret and contributors, and
-the bundled HiGHS solver Copyright the HiGHS authors, both MIT; see
-`inst/COPYRIGHTS` for every copyright holder of bundled code.
+MIT. The bundled Uno solver is Copyright Charlie Vanaret and contributors,
+also MIT; see `inst/COPYRIGHTS` for every copyright holder of bundled code.
+HiGHS and MUMPS are not bundled; they come from the `highs` and `rmumps`
+packages.

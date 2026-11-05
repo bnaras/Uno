@@ -2,10 +2,11 @@
 #'
 #' R bindings to \href{https://github.com/cvanaret/Uno}{Uno} (Unifying Nonlinear
 #' Optimization), a C++ solver for nonlinearly constrained optimization, via
-#' Uno's C API. The HiGHS QP/LP subproblem solver is built from source for the
-#' SQP presets; the MUMPS linear solver used by the interior-point preset is
-#' reached at run time through the \pkg{rmumps} package (bound when the
-#' namespace loads; see \code{\link{uno_mumps_version}}). Intended as a
+#' Uno's C API. The HiGHS QP/LP subproblem solver used by the SQP presets is
+#' reached at run time through the \pkg{highs} package, and the MUMPS linear
+#' solver used by the interior-point preset through the \pkg{rmumps} package
+#' (both bound when the namespace loads; see
+#' \code{\link{uno_mumps_version}}). Intended as a
 #' nonlinear (DNLP) backend for \pkg{CVXR}; this is the R analog of the
 #' \code{unopy} Python package.
 #'
