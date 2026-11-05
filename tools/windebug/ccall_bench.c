@@ -60,7 +60,8 @@ HighsInt Highs_setIntOptionValue(void* highs, const char* option, const HighsInt
 #endif
 /* mode 0: create/solve/destroy per iteration (as Uno does)
    mode 1: same, but threads = 1 before the run
-   mode 2: one instance reused: pass/run per iteration, destroyed once */
+   mode 2: one instance reused: pass/run per iteration, destroyed once
+   mode 3: one instance reused, NEVER destroyed (leaked): isolates run from destroy */
 static SEXP bench_tiny_mode(int n, int mode) {
   const double col_cost[2] = {-2., -4.}, col_lower[2] = {-1e30, -1e30}, col_upper[2] = {1e30, 1e30};
   const double row_lower[1] = {-1e30}, row_upper[1] = {10.};
@@ -68,10 +69,10 @@ static SEXP bench_tiny_mode(int n, int mode) {
   const HighsInt q_start[3] = {0, 1, 2}, q_index[2] = {0, 1}; const double q_value[2] = {2., 2.};
   double x[2], d[2], rd[1]; volatile HighsInt st = 0;
   void* h = NULL;
-  if (mode == 2) { h = Highs_create(); Highs_setBoolOptionValue(h, "output_flag", 0); }
+  if (mode >= 2) { h = Highs_create(); Highs_setBoolOptionValue(h, "output_flag", 0); }
   double t0 = now();
   for (int i = 0; i < n; i++) {
-    if (mode != 2) {
+    if (mode < 2) {
       h = Highs_create();
       Highs_setBoolOptionValue(h, "output_flag", 0);
       if (mode == 1) Highs_setIntOptionValue(h, "threads", 1);
@@ -82,15 +83,16 @@ static SEXP bench_tiny_mode(int n, int mode) {
     Highs_run(h);
     st = Highs_getModelStatus(h);
     Highs_getSolution(h, x, d, NULL, rd);
-    if (mode != 2) Highs_destroy(h);
+    if (mode < 2) Highs_destroy(h);
   }
   double t1 = now(); (void) st;
-  if (mode == 2) Highs_destroy(h);
+  if (mode == 2) Highs_destroy(h);   /* mode 3 leaks the instance on purpose */
   if (x[0] < 0.99 || x[0] > 1.01 || x[1] < 1.99 || x[1] > 2.01) error("wrong solution %g %g", x[0], x[1]);
   return ScalarReal(t1 - t0);
 }
 SEXP bench_tiny_t1(SEXP n_) { return bench_tiny_mode(asInteger(n_), 1); }
 SEXP bench_tiny_reuse(SEXP n_) { return bench_tiny_mode(asInteger(n_), 2); }
+SEXP bench_tiny_leak(SEXP n_) { return bench_tiny_mode(asInteger(n_), 3); }
 
 SEXP bench_tiny(SEXP n_) {
   int n = asInteger(n_);

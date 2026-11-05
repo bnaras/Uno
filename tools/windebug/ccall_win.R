@@ -26,6 +26,8 @@ run <- function(fn, n) {
 run("bench_version", 1000L)
 run("bench_create", 1L)          # one create + destroy (destroy resets the global scheduler)
 run("bench_create", 3L)
+run("bench_tiny_leak", 1L)       # pass/run on one instance that is NEVER destroyed
+run("bench_tiny_leak", 3L)
 run("bench_tiny_reuse", 3L)      # pass/run on one instance, destroyed once at the end
 run("bench_tiny", 1L)            # create / solve / destroy, as Uno does
 run("bench_tiny", 3L)
