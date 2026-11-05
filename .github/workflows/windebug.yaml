@@ -1,0 +1,69 @@
+# TEMPORARY: surface the Windows failure of the highs-linked build (CI run
+# 41987167221 failed while R CMD build rendered the vignette, and rcmdcheck
+# swallows the vignette's error). Install the package with full output, then
+# exercise the HiGHS (filtersqp) path and the vignette directly. Delete this
+# file and its branch once the cause is known.
+on:
+  push:
+    branches: [highs-linked-windebug]
+  workflow_dispatch:
+
+name: windebug
+
+permissions: read-all
+
+jobs:
+  windebug:
+    runs-on: windows-latest
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      R_KEEP_PKG_SOURCE: yes
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: true
+
+      - uses: r-lib/actions/setup-pandoc@v2
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: 'release'
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          needs: check
+
+      - name: highs as installed
+        run: |
+          Rscript -e 'cat("highs", format(packageVersion("highs")), "\n"); inc <- system.file("include", package = "highs"); cat("include:", inc, "\n"); print(list.files(inc)); loadNamespace("highs"); print(getLoadedDLLs()[["highs"]]); r <- getDLLRegisteredRoutines("highs"); cat("registered .Call:", length(r$.Call), "\n")'
+
+      - name: R CMD INSTALL (full output)
+        shell: bash
+        run: R CMD INSTALL --preclean . 2>&1 | tee install.log
+
+      - name: HiGHS path directly (filtersqp, verbose)
+        continue-on-error: true
+        run: |
+          Rscript -e '
+            library(Uno)
+            cat("uno_version:", uno_version(), " mumps:", uno_mumps_version(), "\n")
+            print(getLoadedDLLs()[c("Uno", "highs", "rmumps")])
+            obj  <- function(x) (x[1] - 1)^2 + (x[2] - 2)^2
+            grad <- function(x) c(2 * (x[1] - 1), 2 * (x[2] - 2))
+            cons <- function(x) x[1] + x[2]
+            jac  <- function(x) c(1, 1)
+            hess <- function(x, sigma, lambda) c(2 * sigma, 2 * sigma)
+            res <- uno_solve(n = 2L, lb = c(-Inf, -Inf), ub = c(Inf, Inf), sense = "minimize",
+              obj = obj, grad = grad, m = 1L, cl = -Inf, cu = 10, cons = cons,
+              jac_rows = c(0L, 0L), jac_cols = c(0L, 1L), jac = jac,
+              hess_rows = c(0L, 1L), hess_cols = c(0L, 1L), hess = hess,
+              x0 = c(0, 0), preset = "filtersqp", base_indexing = 0L, verbose = TRUE)
+            str(res[c("optimization_status", "solution_status", "objective", "primal")])'
+
+      - name: tinytest
+        continue-on-error: true
+        run: Rscript -e 'print(tinytest::test_package("Uno"))'
+
+      - name: render the vignette
+        continue-on-error: true
+        run: Rscript -e 'rmarkdown::render("vignettes/Uno.Rmd", output_dir = tempdir())'
