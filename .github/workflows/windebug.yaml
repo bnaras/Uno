@@ -37,16 +37,30 @@ jobs:
         run: |
           Rscript -e 'cat("highs", format(packageVersion("highs")), "\n"); inc <- system.file("include", package = "highs"); cat("include:", inc, "\n"); print(list.files(inc)); loadNamespace("highs"); print(getLoadedDLLs()[["highs"]]); r <- getDLLRegisteredRoutines("highs"); cat("registered .Call:", length(r$.Call), "\n")'
 
+      - name: highs own registry test (C consumer, no Uno)
+        continue-on-error: true
+        shell: bash
+        env:
+          R_HIGHS_LINK_TEST: 1
+        run: Rscript -e 'library(tinytest); library(highs); print(run_test_file(system.file("tinytest", "test_ccallable.R", package = "highs")))' 2>&1
+
+      - name: C API via registry, create/destroy and tiny solves (no Uno)
+        continue-on-error: true
+        shell: bash
+        run: Rscript tools/windebug/ccall_win.R 2>&1; echo "exit=$?"
+
       - name: R CMD INSTALL (full output)
         shell: bash
         run: R CMD INSTALL --preclean . 2>&1 | tee install.log
 
-      - name: HiGHS path directly (filtersqp, verbose)
+      - name: HiGHS path directly (filtersqp, verbose, markers on stderr)
         continue-on-error: true
+        shell: bash
         run: |
           Rscript -e '
+            mark <- function(...) { message("MARK ", ...); flush(stderr()) }
             library(Uno)
-            cat("uno_version:", uno_version(), " mumps:", uno_mumps_version(), "\n")
+            mark("Uno loaded: ", uno_version(), " mumps ", uno_mumps_version())
             print(getLoadedDLLs()[c("Uno", "highs", "rmumps")])
             obj  <- function(x) (x[1] - 1)^2 + (x[2] - 2)^2
             grad <- function(x) c(2 * (x[1] - 1), 2 * (x[2] - 2))
@@ -58,7 +72,16 @@ jobs:
               jac_rows = c(0L, 0L), jac_cols = c(0L, 1L), jac = jac,
               hess_rows = c(0L, 1L), hess_cols = c(0L, 1L), hess = hess,
               x0 = c(0, 0), preset = "filtersqp", base_indexing = 0L, verbose = TRUE)
-            str(res[c("optimization_status", "solution_status", "objective", "primal")])'
+            mark("uno_solve returned")
+            str(res[c("optimization_status", "solution_status", "objective", "primal")])
+            invisible(gc()); mark("after gc")
+            res2 <- uno_solve(n = 2L, lb = c(-Inf, -Inf), ub = c(Inf, Inf), sense = "minimize",
+              obj = obj, grad = grad, m = 1L, cl = -Inf, cu = 10, cons = cons,
+              jac_rows = c(0L, 0L), jac_cols = c(0L, 1L), jac = jac,
+              hess_rows = c(0L, 1L), hess_cols = c(0L, 1L), hess = hess,
+              x0 = c(0, 0), preset = "filtersqp", base_indexing = 0L, verbose = FALSE)
+            mark("second uno_solve returned: ", names(res2$optimization_status))
+            mark("exiting R normally")' 2>&1; echo "exit=$?"
 
       - name: tinytest
         continue-on-error: true
