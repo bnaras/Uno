@@ -14,6 +14,14 @@
   that CRAN's additional checks reported for 2.9.2-1: it was in the bundled
   HiGHS's console-output plumbing, which is gone with the bundle.
 
+* The HiGHS instances behind the SQP presets are pooled for the session and
+  reused instead of being created and destroyed per solve. In HiGHS 1.12
+  through 1.15.1 the C API's `Highs_destroy` also tears down HiGHS' worker
+  thread pool, which crashes R on Windows after the first solve and costs
+  every other platform a pool restart per solve (removed upstream in
+  ERGO-Code/HiGHS#3141, not yet released). Small SQP solves are faster than
+  with the bundled HiGHS as a result.
+
 * Build: the `-DUSE_OPENMP=OFF` setting is kept, with its reason corrected:
   Uno's own sources use no OpenMP; the option only adds an OpenMP requirement
   for a system MUMPS or SPRAL, neither of which the R build uses.
